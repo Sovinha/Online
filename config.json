@@ -1,0 +1,19 @@
+
+
+{
+  "google_maps_api_key": "AIzaSyCk7d22gCPzvTf3uxoUxPT1glo01r7Jfig",
+  "valor_base": 4.5,
+  "valor_km": 0.95,
+  "valor_minimo": 7.0,
+  "lojas": {
+    "express": {
+      "nome": "Filipéia Trattoria Express",
+      "endereco": "Rua Orestes Lisboa, 124, João Pessoa - PB"
+    },
+    "bessa": {
+      "nome": "Filipéia Trattoria Bessa",
+      "endereco": "Rua Oceano Ártico, 305, João Pessoa - PB"
+    }
+  }
+}
+
