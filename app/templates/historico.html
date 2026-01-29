@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Histórico de Cálculos</h3>
+
+<table class="table table-striped">
+    <thead class="table-dark">
+        <tr>
+            <th>Data</th>
+            <th>Loja</th>
+            <th>Total</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for h in registros %}
+        <tr>
+            <td>{{ h.data.strftime("%d/%m/%Y %H:%M") }}</td>
+            <td>{{ h.loja }}</td>
+            <td>R$ {{ "%.2f"|format(h.total) }}</td>
+            <td>
+                <button class="btn btn-secondary btn-sm"
+                        onclick="abrirModal({{ h.id }}, true)">👁️</button>
+                <button class="btn btn-primary btn-sm"
+                        onclick="abrirModal({{ h.id }}, false)">✏️</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="modal fade" id="modalHistorico">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Ranking de Motoboys</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Motoboy</th>
+                            <th>Entregas</th>
+                            <th>KM Médio</th>
+                            <th>Valor Final (R$)</th>
+                            <th>Motivo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modalBody"></tbody>
+                </table>
+            </div>
+
+            <div class="modal-footer">
+                <button id="btnWhatsapp"
+                        class="btn btn-success"
+                        onclick="enviarWhatsapp()">
+                    📲 Enviar via WhatsApp
+                </button>
+
+                <button id="btnSalvar"
+                        class="btn btn-primary"
+                        onclick="salvarEdicao()">
+                    Salvar
+                </button>
+
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Fechar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="/static/historico.js"></script>
+{% endblock %}
