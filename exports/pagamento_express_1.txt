@@ -1,0 +1,9 @@
+Loja: express
+Data: 28/01/2026 13:17
+
+Motoboy: Anderson
+  Valor original: R$ 85.53
+  Ajuste: R$ 0.00
+  Valor final: R$ 85.53
+
+TOTAL GERAL: R$ 85.53
