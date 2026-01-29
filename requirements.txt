@@ -1,9 +1,0 @@
-Flask
-Flask-Login
-Flask-SQLAlchemy
-gunicorn
-pandas
-openpyxl
-googlemaps
-reportlab
-python-dateutil
