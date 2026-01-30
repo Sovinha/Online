@@ -1,19 +1,20 @@
-Loja: express
-Data: 30/01/2026 00:42
+--- FECHAMENTO DE ENTREGAS ---
+Loja: EXPRESS
+Turno: Jantar
+Data: 30/01/2026 03:09
+------------------------------
 
 Motoboy: João
-  Valor original: R$ 168.23
-  Ajuste: R$ 0.00
-  Valor final: R$ 168.23
-
+   Entregas: 23
+   VALOR FINAL: R$ 269.61
+--------------------
 Motoboy: Alex
-  Valor original: R$ 106.50
-  Ajuste: R$ 0.00
-  Valor final: R$ 106.50
-
+   Entregas: 15
+   VALOR FINAL: R$ 182.20
+--------------------
 Motoboy: Anderson
-  Valor original: R$ 94.67
-  Ajuste: R$ 0.00
-  Valor final: R$ 94.67
+   Entregas: 13
+   VALOR FINAL: R$ 154.74
+--------------------
 
-TOTAL GERAL: R$ 369.40
+TOTAL GERAL: R$ 606.55

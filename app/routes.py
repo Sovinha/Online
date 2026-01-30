@@ -259,13 +259,20 @@ def historico_detalhes(id):
         "dados": dados
     })
 
-@bp.route("/historico/excluir/<int:id>", methods=["DELETE"])
+@bp.route("/historico/excluir/<int:id>", methods=["POST"]) # Mude de DELETE para POST
 @login_required
 def historico_excluir(id):
+    # O restante do código permanece igual
     h = db.session.get(Historico, id)
+    if not h:
+        return jsonify({"ok": False, "message": "Registro não encontrado"}), 404
+        
     try:
+        # Remove os arquivos físicos (PDF/TXT) antes de apagar do banco
         for f in [h.arquivo_txt, h.arquivo_pdf]:
-            if f and os.path.exists(f): os.remove(f)
+            if f and os.path.exists(f): 
+                os.remove(f)
+        
         db.session.delete(h)
         db.session.commit()
         return jsonify({"ok": True})

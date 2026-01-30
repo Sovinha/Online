@@ -1,16 +1,17 @@
 let historicoAtual = 0;
 let modoVisualizacao = true;
-let dadosCompletosCachorro = null; // 🔹 Variável para guardar os dados financeiros do registro
+let dadosCompletosCachorro = null;
 
 const NUMERO_WHATSAPP = "558396300542";
 
+// 1. ABRIR MODAL (DETALHES)
 async function abrirModal(id, visualizar) {
     historicoAtual = id;
     modoVisualizacao = visualizar;
 
     const r = await fetch(`/historico/detalhes/${id}`);
     const d = await r.json();
-    dadosCompletosCachorro = d; // 🔹 Salva o JSON completo (com faturamento, taxas, etc)
+    dadosCompletosCachorro = d; 
 
     const tbody = document.getElementById("modalBody");
     tbody.innerHTML = "";
@@ -22,35 +23,36 @@ async function abrirModal(id, visualizar) {
             <td>${i.entregas}</td>
             <td>${i.km_medio}</td>
             <td>
-                <input type="number"
-                       step="0.01"
-                       class="form-control"
-                       value="${i.valor_final}"
-                       ${modoVisualizacao ? "disabled" : ""}
+                <input type="number" 
+                       step="0.01" 
+                       class="form-control" 
+                       value="${i.valor_final}" 
+                       ${modoVisualizacao ? "disabled" : ""} 
                        data-id="${i.id}">
             </td>
             <td>
-                <input type="text"
-                       class="form-control"
-                       value="${i.motivo ?? ""}"
-                       ${modoVisualizacao ? "disabled" : ""}
+                <input type="text" 
+                       class="form-control" 
+                       value="${i.motivo ?? ""}" 
+                       ${modoVisualizacao ? "disabled" : ""} 
                        data-motivo="${i.id}">
             </td>
         </tr>`;
     });
 
+    // Ajusta visibilidade dos botões
     document.getElementById("btnSalvar").style.display = modoVisualizacao ? "none" : "inline-block";
     document.getElementById("btnWhatsapp").style.display = modoVisualizacao ? "inline-block" : "none";
 
     new bootstrap.Modal(document.getElementById("modalHistorico")).show();
 }
 
+// 2. ENVIAR WHATSAPP
 function enviarWhatsapp() {
     if (!dadosCompletosCachorro) return;
 
     const d = dadosCompletosCachorro;
     
-    // 🔹 Cabeçalho com Informações da Loja e Financeiro
     let mensagem = `*RELATÓRIO DE ENTREGAS - ${d.loja}*\n`;
     mensagem += `*Data:* ${d.data}\n`;
     mensagem += `*Turno:* ${d.turno}\n\n`;
@@ -65,7 +67,6 @@ function enviarWhatsapp() {
 
     mensagem += `*DETALHE POR MOTOBOY:*\n`;
 
-    // 🔹 Percorre os motoboys para listar na mensagem
     document.querySelectorAll("[data-id]").forEach(i => {
         const id = i.dataset.id;
         const valor = parseFloat(i.value).toLocaleString('pt-BR', {minimumFractionDigits: 2});
@@ -82,4 +83,49 @@ function enviarWhatsapp() {
     window.open(url, "_blank");
 }
 
-// ... (resto das funções salvarEdicao e excluirRegistro permanecem iguais)
+// 3. SALVAR EDIÇÃO
+async function salvarEdicao() {
+    const editados = [];
+    document.querySelectorAll("[data-id]").forEach(i => {
+        const id = i.dataset.id;
+        const valor = parseFloat(i.value);
+        const motivo = document.querySelector(`[data-motivo="${id}"]`).value;
+        editados.push({ id, valor, motivo });
+    });
+
+    const response = await fetch("/historico/editar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dados: editados })
+    });
+
+    if (response.ok) {
+        alert("Alterações salvas com sucesso!");
+        location.reload();
+    } else {
+        alert("Erro ao salvar alterações.");
+    }
+}
+
+// 4. EXCLUIR REGISTRO (Corrigido para funcionar no Render)
+async function excluirRegistro(id) {
+    if (!confirm("⚠️ Tem certeza que deseja excluir permanentemente este registro?")) return;
+
+    try {
+        const response = await fetch(`/historico/excluir/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+            alert("Registro removido com sucesso!");
+            location.reload();
+        } else {
+            const err = await response.json();
+            alert("Erro ao excluir: " + (err.error || "Erro no servidor"));
+        }
+    } catch (error) {
+        console.error("Erro na requisição:", error);
+        alert("Erro de conexão ao tentar excluir.");
+    }
+}
