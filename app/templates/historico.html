@@ -1,80 +1,132 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h3>Histórico de Cálculos</h3>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>📋 Histórico de Cálculos</h3>
+    <a href="/calcular-rotas" class="btn btn-success">➕ Novo Cálculo</a>
+</div>
 
-<table class="table table-striped">
-    <thead class="table-dark">
-        <tr>
-            <th>Data</th>
-            <th>Loja</th>
-            <th>Total</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for h in registros %}
-        <tr>
-            <td>{{ h.data.strftime("%d/%m/%Y %H:%M") }}</td>
-            <td>{{ h.loja }}</td>
-            <td>R$ {{ "%.2f"|format(h.total) }}</td>
-            <td>
-                <button class="btn btn-secondary btn-sm"
-                        onclick="abrirModal({{ h.id }}, true)">👁️</button>
-                <button class="btn btn-primary btn-sm"
-                        onclick="abrirModal({{ h.id }}, false)">✏️</button>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="card mb-4 shadow-sm">
+    <div class="card-body bg-light">
+        <form method="GET" action="/historico" class="row g-2">
+            <div class="col-md-3">
+                <label class="small fw-bold">Unidade/Loja</label>
+                <select name="loja" class="form-select">
+                    <option value="">Todas as Lojas</option>
+                    <option value="express" {% if loja == 'express' %}selected{% endif %}>Express</option>
+                    <option value="bessa" {% if loja == 'bessa' %}selected{% endif %}>Bessa</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="small fw-bold">Turno</label>
+                <select name="turno" class="form-select">
+                    <option value="">Todos os Turnos</option>
+                    <option value="Almoço" {% if turno == 'Almoço' %}selected{% endif %}>Almoço (Manhã)</option>
+                    <option value="Jantar" {% if turno == 'Jantar' %}selected{% endif %}>Jantar (Noite)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="small fw-bold">Data Específica</label>
+                <input type="date" name="data" class="form-control" value="{{ data_filtro }}">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    🔍 Filtrar Resultados
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
-<div class="modal fade" id="modalHistorico">
-    <div class="modal-dialog modal-lg">
+<div class="table-responsive">
+    <table class="table table-hover table-bordered shadow-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>Data/Hora</th>
+                <th>Loja</th>
+                <th>Turno</th>
+                <th>Total Bruto</th>
+                <th class="text-center">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for h in registros %}
+            <tr>
+                <td class="align-middle">{{ h.data.strftime("%d/%m/%Y %H:%M") }}</td>
+                <td class="align-middle">
+                    <span class="badge bg-secondary">{{ h.loja|upper }}</span>
+                </td>
+                <td class="align-middle">
+                    {% if h.turno == 'Almoço' %}
+                        <span class="badge bg-warning text-dark">☀️ Almoço</span>
+                    {% else %}
+                        <span class="badge bg-info text-dark">🌙 Jantar</span>
+                    {% endif %}
+                </td>
+                <td class="align-middle fw-bold">R$ {{ "%.2f"|format(h.total) }}</td>
+                <td class="text-center">
+                    <div class="btn-group">
+                        <button class="btn btn-outline-secondary btn-sm"
+                                onclick="abrirModal({{ h.id }}, true)" title="Visualizar Detalhes">👁️ Ver</button>
+                        
+                        <button class="btn btn-outline-primary btn-sm"
+                                onclick="abrirModal({{ h.id }}, false)" title="Editar Valores">✏️ Editar</button>
+                        
+                        <button class="btn btn-outline-danger btn-sm"
+                                onclick="excluirRegistro({{ h.id }})" title="Excluir Registro">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center text-muted py-4">Nenhum cálculo encontrado para os filtros selecionados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="modalHistorico" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Ranking de Motoboys</h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="modalTitulo">📊 Detalhes do Fechamento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
             <div class="modal-body">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Motoboy</th>
-                            <th>Entregas</th>
-                            <th>KM Médio</th>
-                            <th>Valor Final (R$)</th>
-                            <th>Motivo</th>
-                        </tr>
-                    </thead>
-                    <tbody id="modalBody"></tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle">
+                        <thead>
+                            <tr class="table-secondary">
+                                <th>Motoboy</th>
+                                <th>Qtd Entregas</th>
+                                <th>KM Médio</th>
+                                <th style="width: 150px;">Valor Final (R$)</th>
+                                <th>Motivo do Ajuste (se houver)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalBody">
+                            </tbody>
+                    </table>
+                </div>
             </div>
 
-            <div class="modal-footer">
-                <button id="btnWhatsapp"
-                        class="btn btn-success"
-                        onclick="enviarWhatsapp()">
-                    📲 Enviar via WhatsApp
+            <div class="modal-footer bg-light">
+                <button id="btnWhatsapp" class="btn btn-success" onclick="enviarWhatsapp()">
+                    📲 Enviar Relatório via WhatsApp
                 </button>
 
-                <button id="btnSalvar"
-                        class="btn btn-primary"
-                        onclick="salvarEdicao()">
-                    Salvar
+                <button id="btnSalvar" class="btn btn-primary" onclick="salvarEdicao()">
+                    💾 Salvar Alterações
                 </button>
 
-                <button class="btn btn-secondary"
-                        data-bs-dismiss="modal">
-                    Fechar
-                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
-
         </div>
     </div>
 </div>
 
 <script src="/static/historico.js"></script>
+
 {% endblock %}

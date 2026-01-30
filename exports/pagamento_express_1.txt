@@ -1,0 +1,19 @@
+Loja: express
+Data: 30/01/2026 00:42
+
+Motoboy: João
+  Valor original: R$ 168.23
+  Ajuste: R$ 0.00
+  Valor final: R$ 168.23
+
+Motoboy: Alex
+  Valor original: R$ 106.50
+  Ajuste: R$ 0.00
+  Valor final: R$ 106.50
+
+Motoboy: Anderson
+  Valor original: R$ 94.67
+  Ajuste: R$ 0.00
+  Valor final: R$ 94.67
+
+TOTAL GERAL: R$ 369.40

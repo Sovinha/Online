@@ -1,27 +1,142 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h3 class="mb-3">Ranking de Motoboys</h3>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>🏆 Ranking de Performance</h3>
+        <button onclick="window.print()" class="btn btn-outline-dark btn-sm d-print-none">
+            🖨️ Imprimir Relatório
+        </button>
+    </div>
 
-<table class="table table-striped">
-<thead class="table-dark">
-<tr>
-<th>Motoboy</th>
-<th>Entregas</th>
-<th>KM Médio</th>
-<th>Total Pago (R$)</th>
-</tr>
-</thead>
-<tbody>
-{% for m, ent, km_med, valor in dados %}
-<tr>
-<td>{{ m }}</td>
-<td>{{ ent }}</td>
-<td>{{ "%.2f"|format(km_med) }}</td>
-<td>R$ {{ "%.2f"|format(valor) }}</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
+    <div class="card mb-4 shadow-sm d-print-none">
+        <div class="card-body bg-light">
+            <form method="GET" action="/dashboard-motoboys" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Unidade</label>
+                    <select name="loja" class="form-select">
+                        <option value="">Todas as Lojas</option>
+                        <option value="express" {% if loja == 'express' %}selected{% endif %}>Express</option>
+                        <option value="bessa" {% if loja == 'bessa' %}selected{% endif %}>Bessa</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Turno</label>
+                    <select name="turno" class="form-select">
+                        <option value="">Dia e Noite</option>
+                        <option value="Almoço" {% if turno == 'Almoço' %}selected{% endif %}>☀️ Almoço</option>
+                        <option value="Jantar" {% if turno == 'Jantar' %}selected{% endif %}>🌙 Jantar</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Data Início</label>
+                    <input type="date" name="data_inicio" class="form-control" value="{{ data_inicio }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Data Fim</label>
+                    <input type="date" name="data_fim" class="form-control" value="{{ data_fim }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">🔍 Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        {% if dados %}
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Líder do Período</h6>
+                    <h4 class="mb-0">{{ dados[0][0] }}</h4>
+                    <small>{{ dados[0][1] }} entregas finalizadas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-success text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total em Diárias/KM</h6>
+                    <h4 class="mb-0">R$ {{ "%.2f"|format(dados|sum(attribute='3')) }}</h4>
+                    <small>Soma de todos os motoboys</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-info text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Volume Total de Pedidos</h6>
+                    <h4 class="mb-0">{{ dados|sum(attribute='1') }}</h4>
+                    <small>Entregas realizadas no filtro selecionado</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0 py-1">Classificação Detalhada</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center" style="width: 80px;">Pos.</th>
+                            <th>Motoboy</th>
+                            <th class="text-center">Qtd Entregas</th>
+                            <th>Eficiência (KM Médio)</th>
+                            <th class="text-end">Total a Pagar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m, ent, km_med, valor in dados %}
+                        <tr>
+                            <td class="text-center">
+                                {% if loop.index == 1 %}<span class="fs-4">🥇</span>
+                                {% elif loop.index == 2 %}<span class="fs-4">🥈</span>
+                                {% elif loop.index == 3 %}<span class="fs-4">🥉</span>
+                                {% else %}<span class="badge rounded-pill bg-light text-dark border">{{ loop.index }}º</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ m }}</strong></td>
+                            <td class="text-center">{{ ent }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2">{{ "%.2f"|format(km_med) }} km</span>
+                                    {% set max_km = 10 %} {# Base para a barra de progresso #}
+                                    <div class="progress w-50" style="height: 6px;">
+                                        <div class="progress-bar bg-info" style="width: {{ (km_med / max_km) * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-end fw-bold text-success">
+                                R$ {{ "%.2f"|format(valor) }}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="fs-1 d-block mb-2">📥</i>
+                                Nenhum dado encontrado para os filtros selecionados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        .btn-group, .d-print-none, form { display: none !important; }
+        .card { border: none !important; box-shadow: none !important; }
+        .table-dark { background-color: #fff !important; color: #000 !important; }
+    }
+</style>
 
 {% endblock %}

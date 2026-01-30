@@ -1,10 +1,9 @@
 from flask import Blueprint, render_template, request, jsonify, send_file, redirect, url_for
 from flask_login import login_required
 from sqlalchemy import func, extract
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
-import json
-import os
+import json, os
 
 from app.extensions import db
 from app.models import Historico, HistoricoMotoboy
@@ -27,7 +26,7 @@ def load_config():
         return json.load(f)
 
 # ======================================================
-# HOME
+# DASHBOARD PRINCIPAL
 # ======================================================
 
 @bp.route("/")
@@ -35,281 +34,301 @@ def load_config():
 def home():
     return redirect(url_for("main.dashboard"))
 
-# ======================================================
-# DASHBOARD
-# ======================================================
-
 @bp.route("/dashboard")
 @login_required
 def dashboard():
-    loja = request.args.get("loja")
+    loja_sel = request.args.get("loja")
+    turno_sel = request.args.get("turno")
+    data_inicio = request.args.get("data_inicio")
+    data_fim = request.args.get("data_fim")
 
     q = Historico.query
-    if loja:
-        q = q.filter(Historico.loja == loja)
+    if loja_sel: q = q.filter(Historico.loja == loja_sel)
+    if turno_sel: q = q.filter(Historico.turno == turno_sel)
+    if data_inicio: q = q.filter(func.date(Historico.data) >= data_inicio)
+    if data_fim: q = q.filter(func.date(Historico.data) <= data_fim)
 
-    total_geral = q.with_entities(func.sum(Historico.total)).scalar() or 0
+    stats = q.with_entities(
+        func.sum(Historico.total).label("pago"),
+        func.sum(Historico.faturamento_pedidos).label("faturamento"),
+        func.sum(Historico.taxas_clientes).label("taxas_cli")
+    ).first()
+
+    fin_geral = {
+        "faturamento": float(stats.faturamento or 0),
+        "taxas_clientes": float(stats.taxas_cli or 0)
+    }
+    total_geral = float(stats.pago or 0)
     qtd_calculos = q.count()
 
-    por_loja = (
-        db.session.query(Historico.loja, func.sum(Historico.total))
-        .group_by(Historico.loja)
-        .all()
-    )
+    por_loja = db.session.query(
+        Historico.loja, 
+        func.sum(Historico.total)
+    ).filter(Historico.id.in_([h.id for h in q.all()]) if qtd_calculos > 0 else False)\
+     .group_by(Historico.loja).all()
 
-    return render_template(
-        "dashboard.html",
-        total_geral=total_geral,
-        qtd_calculos=qtd_calculos,
-        por_loja=por_loja,
-        loja=loja
-    )
+    cfg = load_config()
+    todas_lojas = list(cfg["lojas"].keys())
+
+    return render_template("dashboard.html", 
+                           total_geral=total_geral, 
+                           fin_geral=fin_geral,
+                           qtd_calculos=qtd_calculos, 
+                           por_loja=por_loja, 
+                           todas_lojas=todas_lojas,
+                           request=request)
 
 # ======================================================
-# DASHBOARD MOTOBOYS
+# RANKING DE MOTOBOYS
 # ======================================================
 
 @bp.route("/dashboard-motoboys")
 @login_required
 def dashboard_motoboys():
     loja = request.args.get("loja")
+    turno = request.args.get("turno")
+    data_inicio = request.args.get("data_inicio")
+    data_fim = request.args.get("data_fim")
 
     q = HistoricoMotoboy.query
-    if loja:
-        q = q.filter(HistoricoMotoboy.loja == loja)
+    if loja: q = q.filter(HistoricoMotoboy.loja == loja)
+    if turno: q = q.filter(HistoricoMotoboy.turno == turno)
+    if data_inicio: q = q.filter(func.date(HistoricoMotoboy.data) >= data_inicio)
+    if data_fim: q = q.filter(func.date(HistoricoMotoboy.data) <= data_fim)
 
-    dados = (
-        q.with_entities(
-            HistoricoMotoboy.motoboy,
-            func.sum(HistoricoMotoboy.entregas).label("entregas"),
-            func.avg(HistoricoMotoboy.km_total / HistoricoMotoboy.entregas).label("km_medio"),
-            func.sum(HistoricoMotoboy.valor_final).label("total")
-        )
-        .group_by(HistoricoMotoboy.motoboy)
-        .order_by(func.sum(HistoricoMotoboy.valor_final).desc())
-        .all()
-    )
+    dados = q.with_entities(
+        HistoricoMotoboy.motoboy,
+        func.sum(HistoricoMotoboy.entregas).label("entregas"),
+        func.sum(HistoricoMotoboy.km_total).label("km_total"),
+        func.sum(HistoricoMotoboy.valor_final).label("total")
+    ).group_by(HistoricoMotoboy.motoboy).order_by(func.sum(HistoricoMotoboy.valor_final).desc()).all()
 
-    return render_template(
-        "dashboard_motoboys.html",
-        dados=dados,
-        loja=loja
-    )
+    return render_template("dashboard_motoboys.html", dados=dados, loja=loja, turno=turno, 
+                           data_inicio=data_inicio, data_fim=data_fim)
 
 # ======================================================
-# CALCULAR
+# PROCESSO DE CÁLCULO
 # ======================================================
 
 @bp.route("/calcular-rotas")
 @login_required
 def calcular_rotas():
     cfg = load_config()
-    return render_template(
-        "calcular.html",
-        lojas=cfg["lojas"],
-        base=cfg["valor_base"],
-        km=cfg["valor_km"],
-        minimo=cfg["valor_minimo"]
-    )
+    return render_template("calcular.html", lojas=cfg["lojas"], base=cfg["valor_base"], 
+                           km=cfg["valor_km"], minimo=cfg["valor_minimo"])
 
 @bp.route("/calcular-preview", methods=["POST"])
 @login_required
 def calcular_preview():
     cfg = load_config()
-    loja_key = request.form["loja"]
-    loja_cfg = cfg["lojas"][loja_key]
+    loja_key = request.form.get("loja")
+    loja_cfg = cfg["lojas"].get(loja_key)
+    
+    if not loja_cfg:
+        return jsonify({"error": "Loja inválida"}), 400
+        
+    origem = loja_cfg["endereco"]
+    arquivo = request.files.get("planilha")
 
-    df = pd.read_excel(request.files["planilha"])
+    if not arquivo or arquivo.filename == '':
+        return jsonify({"error": "Nenhum arquivo enviado"}), 400
+
+    try:
+        if arquivo.filename.endswith('.csv'):
+            try:
+                df = pd.read_csv(arquivo, encoding='utf-8', sep=None, engine='python')
+            except:
+                arquivo.seek(0)
+                df = pd.read_csv(arquivo, encoding='latin-1', sep=None, engine='python')
+        else:
+            df = pd.read_excel(arquivo)
+    except Exception as e:
+        return jsonify({"error": f"Erro na leitura: {str(e)}"}), 400
+
     cache = load_cache(CACHE_FILE)
-
-    _, resumo = calcular_pagamentos(
-        df,
-        loja_cfg["endereco"],
-        float(request.form["base"]),
-        float(request.form["km"]),
-        float(request.form["minimo"]),
+    resumo, financeiro = calcular_pagamentos(
+        df, origem, 
+        float(request.form.get("base", 0)), 
+        float(request.form.get("km", 0)), 
+        float(request.form.get("minimo", 0)), 
         cache
     )
-
+    
     save_cache(CACHE_FILE, cache)
-
-    return jsonify({"loja": loja_key, "resumo": resumo})
+    return jsonify({"loja": loja_key, "resumo": resumo, "financeiro": financeiro})
 
 @bp.route("/calcular-confirmar", methods=["POST"])
 @login_required
 def calcular_confirmar():
     data = request.json
-    loja = data["loja"]
-    resumo = data["resumo"]
-    ajustes = data.get("ajustes", {})
+    resumo = data.get("resumo", [])
+    fin = data.get("financeiro", {})
+    
+    historico = Historico(
+        loja=data.get("loja", "Desconhecida"),
+        total=0,
+        turno=resumo[0].get("turno", "Jantar") if resumo else "Jantar",
+        faturamento_pedidos=float(fin.get("faturamento", 0)),
+        taxas_clientes=float(fin.get("taxas_clientes", 0))
+    )
+    
+    try:
+        db.session.add(historico)
+        db.session.flush()
 
-    historico = Historico(loja=loja, total=0)
-    db.session.add(historico)
-    db.session.flush()
+        total_geral = 0
+        ajustes = data.get("ajustes", {})
 
-    total = 0
-    for r in resumo:
-        a = ajustes.get(r["entregador"], {})
-        ajuste = float(a.get("valor", 0))
-        motivo = a.get("motivo", "")
+        for r in resumo:
+            nome = r["entregador"]
+            aj_v = float(ajustes.get(nome, {}).get("valor", 0) or 0)
+            v_orig = float(r.get("total", 0))
+            
+            m = HistoricoMotoboy(
+                historico_id=historico.id, loja=historico.loja, motoboy=nome,
+                entregas=int(r.get("entregas", 0)),
+                km_total=float(r.get("media_km", 0)) * int(r.get("entregas", 0)),
+                valor_original=v_orig, ajuste=aj_v, valor_final=v_orig + aj_v,
+                motivo_ajuste=ajustes.get(nome, {}).get("motivo", ""),
+                turno=r.get("turno", historico.turno),
+                pedidos=r.get("pedidos", "")
+            )
+            db.session.add(m)
+            total_geral += (v_orig + aj_v)
 
-        valor_final = r["total"] + ajuste
+        historico.total = total_geral
+        db.session.commit()
 
-        db.session.add(HistoricoMotoboy(
-            historico_id=historico.id,
-            loja=loja,
-            motoboy=r["entregador"],
-            entregas=r["entregas"],
-            km_total=r["media_km"] * r["entregas"],
-            valor_original=r["total"],
-            ajuste=ajuste,
-            valor_final=valor_final,
-            motivo_ajuste=motivo
-        ))
+        historico.arquivo_txt = gerar_txt(historico.id)
+        historico.arquivo_pdf = gerar_pdf(historico.id)
+        db.session.commit()
 
-        total += valor_final
-
-    historico.total = total
-    historico.arquivo_txt = gerar_txt(historico.id)
-    historico.arquivo_pdf = gerar_pdf(historico.id)
-
-    db.session.commit()
-    return jsonify({"ok": True})
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "message": str(e)}), 500
 
 # ======================================================
-# HISTÓRICO
+# HISTÓRICO E GESTÃO
 # ======================================================
 
 @bp.route("/historico")
 @login_required
 def historico():
-    registros = Historico.query.order_by(Historico.data.desc()).all()
-    return render_template("historico.html", registros=registros)
+    loja = request.args.get("loja")
+    turno = request.args.get("turno")
+    data_f = request.args.get("data")
+
+    q = Historico.query
+    if loja: q = q.filter(Historico.loja == loja)
+    if turno: q = q.filter(Historico.turno == turno)
+    if data_f:
+        try:
+            dt = datetime.strptime(data_f, '%Y-%m-%d').date()
+            q = q.filter(func.date(Historico.data) == dt)
+        except: pass
+
+    registros = q.order_by(Historico.data.desc()).all()
+    cfg = load_config()
+    return render_template("historico.html", registros=registros, todas_lojas=list(cfg["lojas"].keys()))
 
 @bp.route("/historico/detalhes/<int:id>")
 @login_required
 def historico_detalhes(id):
-    h = Historico.query.get_or_404(id)
+    h = db.session.get(Historico, id)
+    if not h: return jsonify({"error": "Não encontrado"}), 404
+    
+    # Cálculo da Cobertura (Evita divisão por zero)
+    cobertura = (h.total / h.taxas_clientes * 100) if h.taxas_clientes and h.taxas_clientes > 0 else 0
 
-    dados = []
-    for m in h.motoboys:
-        dados.append({
-            "id": m.id,
-            "motoboy": m.motoboy,
-            "entregas": m.entregas,
-            "km_medio": round(m.km_total / m.entregas, 2),
-            "valor_original": m.valor_original,
-            "ajuste": m.ajuste,
-            "valor_final": m.valor_final,
-            "motivo": m.motivo_ajuste or ""
-        })
+    dados = [{
+        "id": m.id, "motoboy": m.motoboy, "entregas": m.entregas,
+        "km_medio": round(m.km_total / m.entregas, 2) if m.entregas > 0 else 0,
+        "valor_final": m.valor_final
+    } for m in h.motoboys]
 
     return jsonify({
-        "id": h.id,
-        "loja": h.loja,
-        "data": h.data.strftime("%d/%m/%Y %H:%M"),
+        "id": h.id, 
+        "loja": h.loja.upper(), 
+        "turno": h.turno, 
+        "data": h.data.strftime("%d/%m/%Y %H:%M"), 
+        "faturamento": h.faturamento_pedidos, 
+        "taxas_clientes": h.taxas_clientes,
+        "pago_motoboys": h.total,
+        "cobertura": round(cobertura, 2),
         "dados": dados
     })
 
-@bp.route("/historico/editar", methods=["POST"])
+@bp.route("/historico/excluir/<int:id>", methods=["DELETE"])
 @login_required
-def historico_editar():
-    payload = request.json
-    historico = Historico.query.get_or_404(payload["id"])
-
-    total = 0
-    for item in payload["itens"]:
-        m = HistoricoMotoboy.query.get(item["id"])
-        m.valor_final = float(item["valor_final"])
-        m.ajuste = m.valor_final - m.valor_original
-        m.motivo_ajuste = item.get("motivo", "")
-        total += m.valor_final
-
-    historico.total = total
-    historico.arquivo_txt = gerar_txt(historico.id)
-    historico.arquivo_pdf = gerar_pdf(historico.id)
-
-    db.session.commit()
-    return jsonify({"ok": True})
+def historico_excluir(id):
+    h = db.session.get(Historico, id)
+    try:
+        for f in [h.arquivo_txt, h.arquivo_pdf]:
+            if f and os.path.exists(f): os.remove(f)
+        db.session.delete(h)
+        db.session.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "message": str(e)}), 500
 
 # ======================================================
-# FECHAMENTO MENSAL (CORRIGIDO)
+# NOVAS ROTAS ADICIONADAS (FECHAMENTO E RELATÓRIO)
 # ======================================================
 
 @bp.route("/fechamento")
 @login_required
 def fechamento():
-    loja = request.args.get("loja")  # opcional
-    ano = int(request.args.get("ano", datetime.now().year))
-    mes = int(request.args.get("mes", datetime.now().month))
-
-    q = HistoricoMotoboy.query.filter(
+    loja = request.args.get("loja")
+    hoje = datetime.now()
+    ano = int(request.args.get("ano", hoje.year))
+    mes = int(request.args.get("mes", hoje.month))
+    
+    q = db.session.query(
+        HistoricoMotoboy.motoboy,
+        func.sum(HistoricoMotoboy.entregas).label("entregas"),
+        func.sum(HistoricoMotoboy.km_total).label("km"),
+        func.sum(HistoricoMotoboy.valor_final).label("total")
+    ).filter(
         extract("year", HistoricoMotoboy.data) == ano,
         extract("month", HistoricoMotoboy.data) == mes
     )
-
-    if loja:
-        q = q.filter(HistoricoMotoboy.loja == loja)
-
-    dados = (
-        q.with_entities(
-            HistoricoMotoboy.motoboy,
-            func.sum(HistoricoMotoboy.entregas),
-            func.sum(HistoricoMotoboy.km_total),
-            func.sum(HistoricoMotoboy.valor_final)
-        )
-        .group_by(HistoricoMotoboy.motoboy)
-        .order_by(func.sum(HistoricoMotoboy.valor_final).desc())
-        .all()
-    )
-
-    total_mes = sum(d[3] for d in dados)
-
-    return render_template(
-        "fechamento.html",
-        dados=dados,
-        total_mes=total_mes,
-        loja=loja,
-        mes=mes,
-        ano=ano
-    )
-
-# ======================================================
-# RELATÓRIOS FINANCEIROS (CORRIGIDO)
-# ======================================================
+    
+    if loja: q = q.filter(HistoricoMotoboy.loja == loja)
+    dados = q.group_by(HistoricoMotoboy.motoboy).all()
+    
+    cfg = load_config()
+    return render_template("fechamento.html", 
+                           dados=dados, 
+                           total_mes=sum(d.total for d in dados), 
+                           loja=loja, mes=mes, ano=ano,
+                           todas_lojas=list(cfg["lojas"].keys()))
 
 @bp.route("/relatorios")
 @login_required
-def relatorios():
-    loja = request.args.get("loja")
-
-    q = Historico.query
-    if loja:
-        q = q.filter(Historico.loja == loja)
-
-    registros = q.order_by(Historico.data.desc()).all()
-    return render_template("relatorios.html", registros=registros, loja=loja)
-
-@bp.route("/relatorios/exportar")
-@login_required
 def relatorios_exportar():
-    loja = request.args.get("loja")
-
     q = Historico.query
-    if loja:
-        q = q.filter(Historico.loja == loja)
+    registros = q.all()
+    if not registros: return "Sem dados", 404
 
-    df = pd.read_sql(q.statement, db.session.bind)
-    path = os.path.join(EXPORT_DIR, "relatorio_financeiro.xlsx")
+    data = [{
+        "Data": r.data.strftime("%d/%m/%Y"),
+        "Loja": r.loja,
+        "Turno": r.turno,
+        "Faturamento": r.faturamento_pedidos,
+        "Taxas Clientes": r.taxas_clientes,
+        "Total Pago": r.total
+    } for r in registros]
+
+    df = pd.DataFrame(data)
+    path = os.path.join(EXPORT_DIR, "relatorio_geral.xlsx")
     df.to_excel(path, index=False)
-
     return send_file(path, as_attachment=True)
-
-# ======================================================
-# DOWNLOAD
-# ======================================================
 
 @bp.route("/download")
 @login_required
 def download():
-    return send_file(os.path.abspath(request.args["path"]), as_attachment=True)
+    path = request.args.get("path")
+    if not path or not os.path.exists(path): return "Arquivo não encontrado", 404
+    return send_file(os.path.abspath(path), as_attachment=True)
