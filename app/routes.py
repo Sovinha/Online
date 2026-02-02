@@ -238,14 +238,25 @@ def historico_detalhes(id):
     h = db.session.get(Historico, id)
     if not h: return jsonify({"error": "Não encontrado"}), 404
     
-    # Cálculo da Cobertura (Evita divisão por zero)
-    cobertura = (h.total / h.taxas_clientes * 100) if h.taxas_clientes and h.taxas_clientes > 0 else 0
+    # 🔹 CORREÇÃO DA COBERTURA: 
+    # O cálculo correto é (Quanto entrou de taxa / Quanto saiu para o motoboy)
+    # Se entraram R$ 200 de taxa e você pagou R$ 800 de frete, a cobertura é 25%
+    cobertura = (h.taxas_clientes / h.total * 100) if h.total and h.total > 0 else 0
 
-    dados = [{
-        "id": m.id, "motoboy": m.motoboy, "entregas": m.entregas,
-        "km_medio": round(m.km_total / m.entregas, 2) if m.entregas > 0 else 0,
-        "valor_final": m.valor_final
-    } for m in h.motoboys]
+    dados = []
+    for m in h.motoboys:
+        # 🔹 CORREÇÃO DO KM MÉDIO:
+        # Se m.km_total já for a distância total percorrida pelo motoboy, 
+        # a divisão por m.entregas dará a média correta por viagem.
+        km_medio_calculado = (m.km_total / m.entregas) if m.entregas > 0 else 0
+        
+        dados.append({
+            "id": m.id, 
+            "motoboy": m.motoboy, 
+            "entregas": m.entregas,
+            "km_medio": round(km_medio_calculado, 2),
+            "valor_final": m.valor_final
+        })
 
     return jsonify({
         "id": h.id, 
@@ -255,7 +266,7 @@ def historico_detalhes(id):
         "faturamento": h.faturamento_pedidos, 
         "taxas_clientes": h.taxas_clientes,
         "pago_motoboys": h.total,
-        "cobertura": round(cobertura, 2),
+        "cobertura": round(cobertura, 2), # Agora virá algo como 27.16%
         "dados": dados
     })
 
