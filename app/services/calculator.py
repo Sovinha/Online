@@ -60,12 +60,15 @@ def calcular_pagamentos(df, origem, base, valor_km, minimo, cache):
     
     # 1. Identificação Robusta de Colunas
     cols = [str(c) for c in df.columns]
-    id_col = next((c for c in cols if any(x in c.lower() for x in ['id', 'numero', 'pedido'])), None)
+    
+    # AJUSTE: Prioriza 'numero' ou 'nº' para pegar o ID curto (1, 2, 3) em vez do ID longo
+    id_col = next((c for c in cols if any(x in c.lower() for x in ['numero', 'nº', 'pedido', 'id'])), None)
+    
     col_fat = next((c for c in cols if 'valor' in c.lower() and 'pedido' in c.lower()), None)
     col_taxa = next((c for c in cols if 'taxa' in c.lower() and 'entrega' in c.lower()), None)
     col_entregador = next((c for c in cols if 'entregador' in c.lower() or 'motoboy' in c.lower()), "Entregador")
 
-    # 2. Tratamento de Duplicados (Evita erro 500 se id_col for None)
+    # 2. Tratamento de Duplicados
     if id_col:
         df = df.drop_duplicates(subset=[id_col]).copy()
 
@@ -74,11 +77,9 @@ def calcular_pagamentos(df, origem, base, valor_km, minimo, cache):
 
     # 3. Processamento das Linhas
     for _, row in df.iterrows():
-        # Captura financeira segura
         if col_fat: faturamento_bruto += limpar_valor_monetario(row.get(col_fat, 0))
         if col_taxa: taxas_pagas_clientes += limpar_valor_monetario(row.get(col_taxa, 0))
 
-        # Montagem do endereço
         rua = str(row.get("Rua", "")).strip()
         if not rua or rua.lower() in ["nan", "none", ""]: continue
         
@@ -93,11 +94,19 @@ def calcular_pagamentos(df, origem, base, valor_km, minimo, cache):
             valor_entrega = max((base + (km * valor_km)), minimo)
             nome = str(row.get(col_entregador, "Desconhecido")).strip()
             
-            # Tenta pegar data de várias colunas possíveis
             data_raw = row.get("Data de criação") or row.get("Data") or ""
             turno = identificar_turno(data_raw)
             
-            id_ped = str(row.get(id_col, "S/N")) if id_col else "S/N"
+            # AJUSTE: Formatação do ID do pedido para remover .0 (ex: 15.0 vira 15)
+            id_ped_raw = row.get(id_col, "S/N")
+            if pd.isna(id_ped_raw):
+                id_ped = "S/N"
+            else:
+                try:
+                    # Converte para int e depois string para limpar o ".0"
+                    id_ped = str(int(float(id_ped_raw)))
+                except:
+                    id_ped = str(id_ped_raw)
 
             chave_id = f"{nome}_{turno}"
             entregadores[chave_id]["total"] += valor_entrega
