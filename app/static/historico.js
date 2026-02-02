@@ -17,20 +17,21 @@ async function abrirModal(id, visualizar) {
     tbody.innerHTML = "";
 
     d.dados.forEach(i => {
-        // Criamos a linha principal (Agora com a coluna de Pedidos incluída)
+        // Criamos a linha principal SEM a coluna de pedidos (ela fica escondida)
         tbody.innerHTML += `
         <tr>
-            <td>${i.motoboy}</td>
+            <td class="fw-bold text-primary text-start">${i.motoboy}</td>
             <td>
                 ${i.entregas}
-                <button class="btn btn-link btn-sm p-0 ms-1 text-decoration-none" type="button" 
+                <button class="btn btn-outline-primary btn-sm p-0 px-1 ms-2 border-0" type="button" 
                         onclick="toggleEntregas(${i.id})" title="Ver IDs detalhados">
                     🔍
                 </button>
             </td>
-            <td class="small text-muted">${i.pedidos || 'S/N'}</td> <td>${i.km_medio} km</td>
+            <td>${i.km_medio} km</td>
             <td>
-                <input type="number" step="0.01" class="form-control form-control-sm" 
+                <input type="number" step="0.01" class="form-control form-control-sm text-center mx-auto" 
+                       style="max-width: 100px;"
                        value="${i.valor_final}" 
                        ${modoVisualizacao ? "disabled" : ""} 
                        data-id="${i.id}">
@@ -43,9 +44,12 @@ async function abrirModal(id, visualizar) {
             </td>
         </tr>
         <tr id="detalhe-entrega-${i.id}" style="display: none;" class="bg-light">
-            <td colspan="6"> <div class="p-2 border-start border-primary border-3 ms-3">
-                    <strong>Lista de Pedidos:</strong> 
-                    <span class="text-break">${i.pedidos || 'Não informado'}</span>
+            <td colspan="5"> 
+                <div class="mx-3 my-2 p-3 border-start border-primary border-4 shadow-sm bg-white rounded text-start">
+                    <small class="text-muted d-block mb-1"><strong>IDs dos Pedidos vinculados:</strong></small>
+                    <div class="col-pedidos">
+                        ${i.pedidos || 'Nenhum ID registrado'}
+                    </div>
                 </div>
             </td>
         </tr>`;
@@ -58,19 +62,19 @@ async function abrirModal(id, visualizar) {
     new bootstrap.Modal(document.getElementById("modalHistorico")).show();
 }
 
-// FUNÇÃO PARA MOSTRAR/ESCONDER ENTREGAS (Opcional, caso queira ver expandido)
+// FUNÇÃO PARA MOSTRAR/ESCONDER ENTREGAS
 function toggleEntregas(id) {
     const el = document.getElementById(`detalhe-entrega-${id}`);
     el.style.display = el.style.display === "none" ? "table-row" : "none";
 }
 
-// 2. ENVIAR WHATSAPP (Ajustado para ignorar o ícone da lupa no texto)
+// 2. ENVIAR WHATSAPP
 function enviarWhatsapp() {
     if (!dadosCompletosCachorro) return;
 
     const d = dadosCompletosCachorro;
     
-    let mensagem = `*RELATÓRIO DE ENTREGAS - ${d.loja}*\n`;
+    let mensagem = `*RELATÓRIO DE ENTREGAS - ${d.loja.toUpperCase()}*\n`;
     mensagem += `*Data:* ${d.data}\n`;
     mensagem += `*Turno:* ${d.turno}\n\n`;
     
@@ -91,9 +95,12 @@ function enviarWhatsapp() {
 
         const linhaPrincipal = i.closest("tr");
         const motoboy = linhaPrincipal.children[0].innerText;
-        // Pega a quantidade de entregas ignorando o botão 🔍
+        // Limpa o texto das entregas removendo a lupa
         const entregas = linhaPrincipal.children[1].innerText.replace('🔍', '').trim();
-        const pedidos = linhaPrincipal.children[2].innerText;
+        
+        // Busca os pedidos na linha de detalhe correspondente
+        const detalheLinha = document.getElementById(`detalhe-entrega-${id}`);
+        const pedidos = detalheLinha.querySelector('.col-pedidos').innerText.trim();
 
         mensagem += `• *${motoboy}:* R$ ${valor} (${entregas} entr.)\n`;
         mensagem += `  _Pedidos: ${pedidos}_${motivo ? `\n  _Motivo: ${motivo}_` : ""}\n\n`;
@@ -103,7 +110,7 @@ function enviarWhatsapp() {
     window.open(url, "_blank");
 }
 
-// 3. SALVAR EDIÇÃO (Mantido)
+// 3. SALVAR EDIÇÃO
 async function salvarEdicao() {
     const editados = [];
     document.querySelectorAll("[data-id]").forEach(i => {
@@ -131,7 +138,7 @@ async function salvarEdicao() {
     }
 }
 
-// 4. EXCLUIR REGISTRO (Mantido)
+// 4. EXCLUIR REGISTRO
 async function excluirRegistro(id) {
     if (!confirm("⚠️ Tem certeza que deseja excluir permanentemente este registro?")) return;
 

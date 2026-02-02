@@ -1,6 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
 
+<style>
+    /* Ajustes para manter a tabela organizada */
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    /* Estilo para a caixa de IDs que aparece ao clicar na lupa */
+    .col-pedidos {
+        word-wrap: break-word;
+        white-space: normal !important;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        color: #495057;
+    }
+
+    .col-valor-final {
+        width: 140px;
+    }
+
+    .col-motoboy {
+        min-width: 140px;
+    }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>📋 Histórico de Cálculos</h3>
     <a href="/calcular-rotas" class="btn btn-success">➕ Novo Cálculo</a>
@@ -39,14 +63,14 @@
 </div>
 
 <div class="table-responsive">
-    <table class="table table-hover table-bordered shadow-sm bg-white">
+    <table class="table table-hover table-bordered shadow-sm bg-white text-center">
         <thead class="table-dark">
             <tr>
                 <th>Data/Hora</th>
                 <th>Loja</th>
                 <th>Turno</th>
                 <th>Total Bruto</th>
-                <th class="text-center">Ações</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -54,7 +78,7 @@
             <tr>
                 <td class="align-middle">{{ h.data.strftime("%d/%m/%Y %H:%M") }}</td>
                 <td class="align-middle">
-                    <span class="badge bg-secondary">{{ h.loja|upper }}</span>
+                    <span class="badge bg-secondary px-3">{{ h.loja|upper }}</span>
                 </td>
                 <td class="align-middle">
                     {% if h.turno == 'Almoço' %}
@@ -65,15 +89,15 @@
                 </td>
                 <td class="align-middle fw-bold text-success">R$ {{ "%.2f"|format(h.total) }}</td>
                 <td class="text-center">
-                    <div class="btn-group">
+                    <div class="btn-group shadow-sm">
                         <button class="btn btn-outline-secondary btn-sm"
-                                onclick="abrirModal({{ h.id }}, true)" title="Visualizar Detalhes">👁️ Ver</button>
+                                onclick="abrirModal({{ h.id }}, true)" title="Visualizar">👁️ Ver</button>
                         
                         <button class="btn btn-outline-primary btn-sm"
-                                onclick="abrirModal({{ h.id }}, false)" title="Editar Valores">✏️ Editar</button>
+                                onclick="abrirModal({{ h.id }}, false)" title="Editar">✏️ Editar</button>
                         
                         <button class="btn btn-outline-danger btn-sm"
-                                onclick="excluirRegistro({{ h.id }})" title="Excluir Registro">🗑️</button>
+                                onclick="excluirRegistro({{ h.id }})" title="Excluir">🗑️</button>
                     </div>
                 </td>
             </tr>
@@ -90,7 +114,7 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title" id="modalTitulo">📊 Detalhes do Fechamento</h5>
+                <h5 class="modal-title" id="modalTitulo text-center">📊 Detalhamento do Fechamento</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
@@ -98,11 +122,11 @@
                 <div class="table-responsive">
                     <table class="table table-sm table-striped align-middle">
                         <thead>
-                            <tr class="table-secondary">
-                                <th>Motoboy</th>
+                            <tr class="table-secondary text-center">
+                                <th class="col-motoboy">Motoboy</th>
                                 <th>Entregas</th>
-                                <th>Pedidos</th> <th>KM Médio</th>
-                                <th style="width: 140px;">Valor Final (R$)</th>
+                                <th>KM Médio</th>
+                                <th class="col-valor-final text-center">Valor Final (R$)</th>
                                 <th>Motivo do Ajuste</th>
                             </tr>
                         </thead>
@@ -114,7 +138,7 @@
 
             <div class="modal-footer bg-light">
                 <button id="btnWhatsapp" class="btn btn-success" onclick="enviarWhatsapp()">
-                    <i class="bi bi-whatsapp"></i> Enviar WhatsApp
+                    <i class="bi bi-whatsapp"></i> Enviar via WhatsApp
                 </button>
 
                 <button id="btnSalvar" class="btn btn-primary" onclick="salvarEdicao()">
