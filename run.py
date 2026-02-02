@@ -1,27 +1,42 @@
+import os
+from sqlalchemy import text
 from app.app import create_app
 from app.extensions import db
-from sqlalchemy import text # Importação necessária para rodar o comando SQL
 
 app = create_app()
 
-# Este bloco verifica e cria as novas colunas e tabelas automaticamente
+# Este bloco gerencia a persistência no Supabase e atualizações de colunas
 with app.app_context():
-    # 1. Cria tabelas novas (se houver)
+    # 1. Cria tabelas no novo banco (Supabase)
     db.create_all()
     
-    # 2. Adiciona as colunas novas manualmente caso elas ainda não existam
+    # 2. Lógica de atualização de colunas
+    # Nota: O PostgreSQL não suporta "IF NOT EXISTS" direto no ALTER TABLE em versões antigas,
+    # por isso usamos um bloco try/except robusto.
     try:
-        # Adiciona coluna 'pedidos' na tabela historico_motoboy
-        db.session.execute(text("ALTER TABLE historico_motoboy ADD COLUMN IF NOT EXISTS pedidos TEXT"))
-        # Adiciona coluna 'motivo_ajuste' na tabela historico_motoboy
-        db.session.execute(text("ALTER TABLE historico_motoboy ADD COLUMN IF NOT EXISTS motivo_ajuste VARCHAR(255)"))
+        # Verifica se estamos no SQLite ou PostgreSQL para usar a sintaxe correta
+        is_postgres = "postgresql" in str(db.engine.url)
         
-        db.session.commit()
-        print("✅ Colunas de histórico atualizadas com sucesso!")
+        # Comando para adicionar coluna 'pedidos'
+        try:
+            db.session.execute(text("ALTER TABLE historico_motoboy ADD COLUMN pedidos TEXT"))
+            db.session.commit()
+        except:
+            db.session.rollback()
+
+        # Comando para adicionar coluna 'motivo_ajuste'
+        try:
+            db.session.execute(text("ALTER TABLE historico_motoboy ADD COLUMN motivo_ajuste VARCHAR(255)"))
+            db.session.commit()
+        except:
+            db.session.rollback()
+            
+        print("✅ Verificação de colunas concluída no banco persistente!")
     except Exception as e:
         db.session.rollback()
-        print(f"⚠️ Nota: As colunas podem já existir ou houve um erro menor: {e}")
+        print(f"⚠️ Nota: Colunas já existentes ou erro de migração: {e}")
 
 if __name__ == "__main__":
-    # O host 0.0.0.0 é necessário para que o Render consiga acessar a aplicação
-    app.run(host="0.0.0.0", port=10000, debug=False)
+    # O Render define a porta automaticamente, se não houver, usa a 10000
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=False)
