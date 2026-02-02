@@ -1,29 +1,52 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h4>Detalhes do Cálculo</h4>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Detalhes do Fechamento</h4>
+    <a href="{{ url_for('main.historico') }}" class="btn btn-secondary btn-sm">Voltar</a>
+</div>
 
-<table class="table table-striped">
-<thead class="table-dark">
-<tr>
-<th>Motoboy</th>
-<th>Original</th>
-<th>Ajuste</th>
-<th>Final</th>
-<th>Motivo</th>
-</tr>
-</thead>
-<tbody>
-{% for i in itens %}
-<tr>
-<td>{{ i.motoboy }}</td>
-<td>R$ {{ "%.2f"|format(i.valor_original) }}</td>
-<td>R$ {{ "%.2f"|format(i.ajuste) }}</td>
-<td>R$ {{ "%.2f"|format(i.valor_final) }}</td>
-<td>{{ i.motivo_ajuste }}</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Motoboy</th>
+                <th>Entregas</th>
+                <th>KM Médio</th>
+                <th>Original</th>
+                <th>Ajuste</th>
+                <th>Final</th>
+                <th>Motivo do Ajuste</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in itens %}
+            <tr class="table-light">
+                <td class="fw-bold">{{ i.motoboy }}</td>
+                <td>
+                    {{ i.entregas }}
+                    <button class="btn btn-outline-primary btn-sm ms-2" type="button" 
+                            data-bs-toggle="collapse" data-bs-target="#pedidos-{{ i.id }}">
+                        🔍 Ver IDs
+                    </button>
+                </td>
+                <td>{{ "%.2f"|format(i.km_total / i.entregas if i.entregas > 0 else 0) }} km</td>
+                <td>R$ {{ "%.2f"|format(i.valor_original) }}</td>
+                <td class="text-danger">R$ {{ "%.2f"|format(i.ajuste) }}</td>
+                <td class="fw-bold text-success">R$ {{ "%.2f"|format(i.valor_final) }}</td>
+                <td class="fst-italic text-muted">{{ i.motivo_ajuste if i.motivo_ajuste else "-" }}</td>
+            </tr>
+            <tr class="collapse" id="pedidos-{{ i.id }}">
+                <td colspan="7" class="bg-light">
+                    <div class="p-3 border-start border-primary border-4">
+                        <strong>Pedidos realizados:</strong><br>
+                        <span class="text-break">{{ i.pedidos if i.pedidos else "Nenhum ID registrado" }}</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 {% endblock %}

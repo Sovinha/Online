@@ -1,6 +1,11 @@
 from datetime import datetime
+import pytz
 from flask_login import UserMixin
 from app.extensions import db
+
+# Função auxiliar para garantir o horário de Brasília em todo o banco de dados
+def get_br_time():
+    return datetime.now(pytz.timezone('America/Sao_Paulo'))
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -9,10 +14,11 @@ class User(db.Model, UserMixin):
 
 class Historico(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    data = db.Column(db.DateTime, default=datetime.now)
+    # Usamos default=get_br_time para a data de criação ser automática e correta
+    data = db.Column(db.DateTime, default=get_br_time)
     loja = db.Column(db.String(50), index=True)
     turno = db.Column(db.String(20), index=True) 
-    total = db.Column(db.Float)
+    total = db.Column(db.Float, default=0.0)
     
     # NOVOS CAMPOS FINANCEIROS PARA O PATRÃO
     faturamento_pedidos = db.Column(db.Float, default=0.0)
@@ -26,17 +32,17 @@ class Historico(db.Model):
 class HistoricoMotoboy(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     historico_id = db.Column(db.Integer, db.ForeignKey("historico.id"), nullable=False, index=True)
-    data = db.Column(db.DateTime, default=datetime.now)
+    data = db.Column(db.DateTime, default=get_br_time)
     loja = db.Column(db.String(50), index=True)
     turno = db.Column(db.String(20), index=True) 
     motoboy = db.Column(db.String(120), index=True)
-    entregas = db.Column(db.Integer)
-    km_total = db.Column(db.Float)
+    entregas = db.Column(db.Integer, default=0)
+    km_total = db.Column(db.Float, default=0.0)
     
-    # NOVO: Armazena os números dos pedidos (ex: #101, #102)
+    # Armazena os números dos pedidos (ex: #101, #102)
     pedidos = db.Column(db.Text) 
 
-    valor_original = db.Column(db.Float)
-    ajuste = db.Column(db.Float)
-    valor_final = db.Column(db.Float)
+    valor_original = db.Column(db.Float, default=0.0)
+    ajuste = db.Column(db.Float, default=0.0)
+    valor_final = db.Column(db.Float, default=0.0)
     motivo_ajuste = db.Column(db.String(255))

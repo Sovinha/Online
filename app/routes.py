@@ -238,24 +238,19 @@ def historico_detalhes(id):
     h = db.session.get(Historico, id)
     if not h: return jsonify({"error": "Não encontrado"}), 404
     
-    # 🔹 CORREÇÃO DA COBERTURA: 
-    # O cálculo correto é (Quanto entrou de taxa / Quanto saiu para o motoboy)
-    # Se entraram R$ 200 de taxa e você pagou R$ 800 de frete, a cobertura é 25%
     cobertura = (h.taxas_clientes / h.total * 100) if h.total and h.total > 0 else 0
 
     dados = []
     for m in h.motoboys:
-        # 🔹 CORREÇÃO DO KM MÉDIO:
-        # Se m.km_total já for a distância total percorrida pelo motoboy, 
-        # a divisão por m.entregas dará a média correta por viagem.
         km_medio_calculado = (m.km_total / m.entregas) if m.entregas > 0 else 0
-        
         dados.append({
             "id": m.id, 
             "motoboy": m.motoboy, 
             "entregas": m.entregas,
             "km_medio": round(km_medio_calculado, 2),
-            "valor_final": m.valor_final
+            "valor_final": m.valor_final,
+            "motivo": m.motivo_ajuste, # Envia o motivo salvo
+            "pedidos": m.pedidos       # Envia a lista de IDs dos pedidos
         })
 
     return jsonify({
@@ -266,20 +261,45 @@ def historico_detalhes(id):
         "faturamento": h.faturamento_pedidos, 
         "taxas_clientes": h.taxas_clientes,
         "pago_motoboys": h.total,
-        "cobertura": round(cobertura, 2), # Agora virá algo como 27.16%
+        "cobertura": round(cobertura, 2),
         "dados": dados
     })
 
-@bp.route("/historico/excluir/<int:id>", methods=["POST"]) # Mude de DELETE para POST
+@bp.route("/historico/editar", methods=["POST"])
+@login_required
+def historico_editar():
+    data = request.json
+    try:
+        total_historico = 0
+        historico_id = None
+
+        for item in data.get("dados", []):
+            m = db.session.get(HistoricoMotoboy, item["id"])
+            if m:
+                m.valor_final = float(item["valor"])
+                m.motivo_ajuste = item.get("motivo", "")
+                total_historico += m.valor_final
+                historico_id = m.historico_id
+        
+        # Atualiza o total geral do registro pai
+        if historico_id:
+            h = db.session.get(Historico, historico_id)
+            if h: h.total = total_historico
+
+        db.session.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "message": str(e)}), 500
+
+@bp.route("/historico/excluir/<int:id>", methods=["POST"])
 @login_required
 def historico_excluir(id):
-    # O restante do código permanece igual
     h = db.session.get(Historico, id)
     if not h:
         return jsonify({"ok": False, "message": "Registro não encontrado"}), 404
         
     try:
-        # Remove os arquivos físicos (PDF/TXT) antes de apagar do banco
         for f in [h.arquivo_txt, h.arquivo_pdf]:
             if f and os.path.exists(f): 
                 os.remove(f)
