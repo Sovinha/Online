@@ -2,7 +2,10 @@
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4>Detalhes do Fechamento</h4>
+    <div>
+        <h4 class="mb-0">Detalhes do Fechamento</h4>
+        <small class="text-muted">Loja: {{ itens[0].loja if itens else "-" }} | Turno: {{ itens[0].turno if itens else "-" }}</small>
+    </div>
     <a href="{{ url_for('main.historico') }}" class="btn btn-secondary btn-sm">Voltar</a>
 </div>
 
@@ -22,25 +25,32 @@
         <tbody>
             {% for i in itens %}
             <tr class="table-light">
-                <td class="fw-bold">{{ i.motoboy }}</td>
+                <td class="fw-bold text-primary">{{ i.motoboy }}</td>
                 <td>
-                    {{ i.entregas }}
-                    <button class="btn btn-outline-primary btn-sm ms-2" type="button" 
+                    <span class="badge bg-secondary">{{ i.entregas }}</span>
+                    <button class="btn btn-outline-primary btn-sm ms-2 py-0" style="font-size: 0.75rem;" type="button" 
                             data-bs-toggle="collapse" data-bs-target="#pedidos-{{ i.id }}">
                         🔍 Ver IDs
                     </button>
                 </td>
                 <td>{{ "%.2f"|format(i.km_total / i.entregas if i.entregas > 0 else 0) }} km</td>
-                <td>R$ {{ "%.2f"|format(i.valor_original) }}</td>
-                <td class="text-danger">R$ {{ "%.2f"|format(i.ajuste) }}</td>
+                <td class="text-muted">R$ {{ "%.2f"|format(i.valor_original) }}</td>
+                <td class="text-danger">{% if i.ajuste != 0 %}R$ {{ "%.2f"|format(i.ajuste) }}{% else %}-{% endif %}</td>
                 <td class="fw-bold text-success">R$ {{ "%.2f"|format(i.valor_final) }}</td>
-                <td class="fst-italic text-muted">{{ i.motivo_ajuste if i.motivo_ajuste else "-" }}</td>
+                <td class="fst-italic text-muted">
+                    <small>{{ i.motivo_ajuste if i.motivo_ajuste else "-" }}</small>
+                </td>
             </tr>
             <tr class="collapse" id="pedidos-{{ i.id }}">
-                <td colspan="7" class="bg-light">
-                    <div class="p-3 border-start border-primary border-4">
-                        <strong>Pedidos realizados:</strong><br>
-                        <span class="text-break">{{ i.pedidos if i.pedidos else "Nenhum ID registrado" }}</span>
+                <td colspan="7" class="bg-white">
+                    <div class="mx-3 my-2 p-3 border-start border-primary border-4 shadow-sm bg-light rounded">
+                        <div class="d-flex align-items-center mb-1">
+                            <i class="bi bi-box-seam me-2 text-primary"></i>
+                            <strong>Pedidos realizados por {{ i.motoboy }}:</strong>
+                        </div>
+                        <p class="mb-0 text-muted" style="letter-spacing: 0.5px;">
+                            {{ i.pedidos if i.pedidos else "Nenhum ID registrado" }}
+                        </p>
                     </div>
                 </td>
             </tr>

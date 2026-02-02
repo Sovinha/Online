@@ -61,8 +61,14 @@ def calcular_pagamentos(df, origem, base, valor_km, minimo, cache):
     # 1. Identificação Robusta de Colunas
     cols = [str(c) for c in df.columns]
     
-    # AJUSTE: Prioriza 'numero' ou 'nº' para pegar o ID curto (1, 2, 3) em vez do ID longo
-    id_col = next((c for c in cols if any(x in c.lower() for x in ['numero', 'nº', 'pedido', 'id'])), None)
+    # --- NOVA LÓGICA DE IDENTIFICAÇÃO DE ID ---
+    # Passo A: Tenta achar colunas que NÃO tenham "ID" no nome (prioriza 'Número', 'Nº', 'Pedido')
+    id_col = next((c for c in cols if any(x in c.lower() for x in ['numero', 'nº', 'pedido']) and 'id' not in c.lower()), None)
+    
+    # Passo B: Se não achou, aí sim aceita qualquer uma que tenha 'id', 'numero', etc.
+    if not id_col:
+        id_col = next((c for c in cols if any(x in c.lower() for x in ['id', 'numero', 'nº', 'pedido'])), None)
+    # ------------------------------------------
     
     col_fat = next((c for c in cols if 'valor' in c.lower() and 'pedido' in c.lower()), None)
     col_taxa = next((c for c in cols if 'taxa' in c.lower() and 'entrega' in c.lower()), None)
@@ -97,9 +103,9 @@ def calcular_pagamentos(df, origem, base, valor_km, minimo, cache):
             data_raw = row.get("Data de criação") or row.get("Data") or ""
             turno = identificar_turno(data_raw)
             
-            # AJUSTE: Formatação do ID do pedido para remover .0 (ex: 15.0 vira 15)
+            # Formatação do ID do pedido para remover .0 (ex: 15.0 vira 15)
             id_ped_raw = row.get(id_col, "S/N")
-            if pd.isna(id_ped_raw):
+            if pd.isna(id_ped_raw) or id_ped_raw == "":
                 id_ped = "S/N"
             else:
                 try:

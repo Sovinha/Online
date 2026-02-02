@@ -31,7 +31,7 @@
             </div>
             <div class="col-md-3 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">
-                    🔍 Filtrar Resultados
+                    <i class="bi bi-search"></i> Filtrar Resultados
                 </button>
             </div>
         </form>
@@ -39,7 +39,7 @@
 </div>
 
 <div class="table-responsive">
-    <table class="table table-hover table-bordered shadow-sm">
+    <table class="table table-hover table-bordered shadow-sm bg-white">
         <thead class="table-dark">
             <tr>
                 <th>Data/Hora</th>
@@ -63,7 +63,7 @@
                         <span class="badge bg-info text-dark">🌙 Jantar</span>
                     {% endif %}
                 </td>
-                <td class="align-middle fw-bold">R$ {{ "%.2f"|format(h.total) }}</td>
+                <td class="align-middle fw-bold text-success">R$ {{ "%.2f"|format(h.total) }}</td>
                 <td class="text-center">
                     <div class="btn-group">
                         <button class="btn btn-outline-secondary btn-sm"
@@ -100,10 +100,10 @@
                         <thead>
                             <tr class="table-secondary">
                                 <th>Motoboy</th>
-                                <th>Qtd Entregas</th>
-                                <th>KM Médio</th>
-                                <th style="width: 150px;">Valor Final (R$)</th>
-                                <th>Motivo do Ajuste (se houver)</th>
+                                <th>Entregas</th>
+                                <th>Pedidos</th> <th>KM Médio</th>
+                                <th style="width: 140px;">Valor Final (R$)</th>
+                                <th>Motivo do Ajuste</th>
                             </tr>
                         </thead>
                         <tbody id="modalBody">
@@ -114,11 +114,11 @@
 
             <div class="modal-footer bg-light">
                 <button id="btnWhatsapp" class="btn btn-success" onclick="enviarWhatsapp()">
-                    📲 Enviar Relatório via WhatsApp
+                    <i class="bi bi-whatsapp"></i> Enviar WhatsApp
                 </button>
 
                 <button id="btnSalvar" class="btn btn-primary" onclick="salvarEdicao()">
-                    💾 Salvar Alterações
+                    <i class="bi bi-save"></i> Salvar Alterações
                 </button>
 
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>

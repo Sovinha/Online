@@ -1,51 +1,75 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h3>Fechamento Mensal</h3>
-
-<form method="get" class="row g-2 mb-3">
-<div class="col-md-3">
-<select name="loja" class="form-select">
-<option value="">Todas as lojas</option>
-<option value="Filipéia Trattoria Express">Express</option>
-<option value="Filipéia Trattoria Bessa">Bessa</option>
-</select>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3><i class="bi bi-calendar-check"></i> Fechamento Mensal</h3>
+    <span class="badge bg-secondary">Período: {{ mes }}/{{ ano }}</span>
 </div>
 
-<div class="col-md-2">
-<input type="number" name="mes" value="{{ mes }}" class="form-control">
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Loja</label>
+                <select name="loja" class="form-select">
+                    <option value="">Todas as lojas</option>
+                    <option value="Filipéia Trattoria Express" {% if request.args.get('loja') == 'Filipéia Trattoria Express' %}selected{% endif %}>Express</option>
+                    <option value="Filipéia Trattoria Bessa" {% if request.args.get('loja') == 'Filipéia Trattoria Bessa' %}selected{% endif %}>Bessa</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Mês</label>
+                <input type="number" name="mes" value="{{ mes }}" min="1" max="12" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Ano</label>
+                <input type="number" name="ano" value="{{ ano }}" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100">
+                    <i class="bi bi-filter"></i> Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
-<div class="col-md-2">
-<input type="number" name="ano" value="{{ ano }}" class="form-control">
+<div class="table-responsive shadow-sm rounded">
+    <table class="table table-hover align-middle bg-white">
+        <thead class="table-dark">
+            <tr>
+                <th>Motoboy</th>
+                <th class="text-center">Total Entregas</th>
+                <th class="text-center">KM Médio Mensal</th>
+                <th class="text-end">Total Pago no Mês</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m, e, km, t in dados %}
+            <tr>
+                <td class="fw-bold text-primary">{{ m }}</td>
+                <td class="text-center">
+                    <span class="badge rounded-pill bg-info text-dark">{{ e }}</span>
+                </td>
+                <td class="text-center">{{ "%.2f"|format(km) }} km</td>
+                <td class="text-end fw-bold text-success">R$ {{ "%.2f"|format(t) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center text-muted py-4">Nenhum registro encontrado para este período.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
+            <tr>
+                <th colspan="3" class="text-end text-uppercase">Total Geral Acumulado:</th>
+                <th class="text-end h5 mb-0 text-dark">R$ {{ "%.2f"|format(total_mes) }}</th>
+            </tr>
+        </tfoot>
+    </table>
 </div>
-
-<div class="col-md-2">
-<button class="btn btn-primary">Filtrar</button>
-</div>
-</form>
-
-<table class="table table-striped">
-<thead class="table-dark">
-<tr>
-<th>Motoboy</th>
-<th>Entregas</th>
-<th>KM Médio</th>
-<th>Total Pago</th>
-</tr>
-</thead>
-<tbody>
-{% for m, e, km, t in dados %}
-<tr>
-<td>{{ m }}</td>
-<td>{{ e }}</td>
-<td>{{ "%.2f"|format(km) }}</td>
-<td>R$ {{ "%.2f"|format(t) }}</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
-
-<h5>Total Geral: R$ {{ "%.2f"|format(total_mes) }}</h5>
 
 {% endblock %}

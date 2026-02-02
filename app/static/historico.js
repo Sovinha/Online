@@ -17,35 +17,35 @@ async function abrirModal(id, visualizar) {
     tbody.innerHTML = "";
 
     d.dados.forEach(i => {
-        // Criamos a linha principal e a linha de detalhes (pedidos)
+        // Criamos a linha principal (Agora com a coluna de Pedidos incluída)
         tbody.innerHTML += `
         <tr>
             <td>${i.motoboy}</td>
             <td>
                 ${i.entregas}
-                <button class="btn btn-link btn-sm p-0 ms-2 text-decoration-none" type="button" 
-                        onclick="toggleEntregas(${i.id})">
-                    🔍 Ver
+                <button class="btn btn-link btn-sm p-0 ms-1 text-decoration-none" type="button" 
+                        onclick="toggleEntregas(${i.id})" title="Ver IDs detalhados">
+                    🔍
                 </button>
             </td>
-            <td>${i.km_medio}</td>
+            <td class="small text-muted">${i.pedidos || 'S/N'}</td> <td>${i.km_medio} km</td>
             <td>
-                <input type="number" step="0.01" class="form-control" 
+                <input type="number" step="0.01" class="form-control form-control-sm" 
                        value="${i.valor_final}" 
                        ${modoVisualizacao ? "disabled" : ""} 
                        data-id="${i.id}">
             </td>
             <td>
-                <input type="text" class="form-control" 
+                <input type="text" class="form-control form-control-sm" 
                        value="${i.motivo ?? ""}" 
                        ${modoVisualizacao ? "disabled" : ""} 
                        data-motivo="${i.id}">
             </td>
         </tr>
         <tr id="detalhe-entrega-${i.id}" style="display: none;" class="bg-light">
-            <td colspan="5">
-                <div class="p-2 border-start border-primary border-3">
-                    <small><strong>IDs dos Pedidos:</strong> ${i.pedidos || 'Não informado'}</small>
+            <td colspan="6"> <div class="p-2 border-start border-primary border-3 ms-3">
+                    <strong>Lista de Pedidos:</strong> 
+                    <span class="text-break">${i.pedidos || 'Não informado'}</span>
                 </div>
             </td>
         </tr>`;
@@ -58,13 +58,13 @@ async function abrirModal(id, visualizar) {
     new bootstrap.Modal(document.getElementById("modalHistorico")).show();
 }
 
-// FUNÇÃO PARA MOSTRAR/ESCONDER ENTREGAS
+// FUNÇÃO PARA MOSTRAR/ESCONDER ENTREGAS (Opcional, caso queira ver expandido)
 function toggleEntregas(id) {
     const el = document.getElementById(`detalhe-entrega-${id}`);
     el.style.display = el.style.display === "none" ? "table-row" : "none";
 }
 
-// 2. ENVIAR WHATSAPP
+// 2. ENVIAR WHATSAPP (Ajustado para ignorar o ícone da lupa no texto)
 function enviarWhatsapp() {
     if (!dadosCompletosCachorro) return;
 
@@ -84,25 +84,26 @@ function enviarWhatsapp() {
 
     mensagem += `*DETALHE POR MOTOBOY:*\n`;
 
-    // Pegamos os dados diretamente dos inputs para refletir alterações manuais
     document.querySelectorAll("[data-id]").forEach(i => {
         const id = i.dataset.id;
         const valor = parseFloat(i.value).toLocaleString('pt-BR', {minimumFractionDigits: 2});
         const motivo = document.querySelector(`[data-motivo="${id}"]`).value;
 
-        // Pegamos o nome do motoboy e entregas da linha pai do input
         const linhaPrincipal = i.closest("tr");
         const motoboy = linhaPrincipal.children[0].innerText;
-        const entregas = linhaPrincipal.children[1].innerText.split(' ')[0].trim(); // Pega só o número, ignora o botão "Ver"
+        // Pega a quantidade de entregas ignorando o botão 🔍
+        const entregas = linhaPrincipal.children[1].innerText.replace('🔍', '').trim();
+        const pedidos = linhaPrincipal.children[2].innerText;
 
-        mensagem += `• *${motoboy}:* R$ ${valor} (${entregas} entr.)${motivo ? ` _Motivo: ${motivo}_` : ""}\n`;
+        mensagem += `• *${motoboy}:* R$ ${valor} (${entregas} entr.)\n`;
+        mensagem += `  _Pedidos: ${pedidos}_${motivo ? `\n  _Motivo: ${motivo}_` : ""}\n\n`;
     });
 
     const url = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensagem)}`;
     window.open(url, "_blank");
 }
 
-// 3. SALVAR EDIÇÃO
+// 3. SALVAR EDIÇÃO (Mantido)
 async function salvarEdicao() {
     const editados = [];
     document.querySelectorAll("[data-id]").forEach(i => {
@@ -130,7 +131,7 @@ async function salvarEdicao() {
     }
 }
 
-// 4. EXCLUIR REGISTRO
+// 4. EXCLUIR REGISTRO (Mantido)
 async function excluirRegistro(id) {
     if (!confirm("⚠️ Tem certeza que deseja excluir permanentemente este registro?")) return;
 
