@@ -61,20 +61,24 @@ def calcular_pagamentos(df, origem, base, valor_km, minimo, cache):
     # 1. Identificação Robusta de Colunas
     cols = [str(c) for c in df.columns]
     
-    # --- NOVA LÓGICA DE IDENTIFICAÇÃO DE ID ---
-    # Passo A: Tenta achar colunas que NÃO tenham "ID" no nome (prioriza 'Número', 'Nº', 'Pedido')
-    id_col = next((c for c in cols if any(x in c.lower() for x in ['numero', 'nº', 'pedido']) and 'id' not in c.lower()), None)
+    # --- LÓGICA DE IDENTIFICAÇÃO DE ID CURTO (Número do pedido) ---
+    # Prioridade 1: Nome exato "Número do pedido" (ajustado conforme sua imagem)
+    id_col = next((c for c in cols if normalizar(c) == "numero do pedido"), None)
     
-    # Passo B: Se não achou, aí sim aceita qualquer uma que tenha 'id', 'numero', etc.
+    # Prioridade 2: Se não achou o exato, busca por 'numero' ou 'nº' que não tenha 'id' no nome
     if not id_col:
-        id_col = next((c for c in cols if any(x in c.lower() for x in ['id', 'numero', 'nº', 'pedido'])), None)
-    # ------------------------------------------
+        id_col = next((c for c in cols if any(x in normalizar(c) for x in ['numero', 'nº', 'pedido']) and 'id' not in normalizar(c)), None)
+    
+    # Prioridade 3: Backup final aceitando qualquer menção a ID/Pedido
+    if not id_col:
+        id_col = next((c for c in cols if any(x in normalizar(c) for x in ['id', 'numero', 'nº', 'pedido'])), None)
+    # -------------------------------------------------------------
     
     col_fat = next((c for c in cols if 'valor' in c.lower() and 'pedido' in c.lower()), None)
     col_taxa = next((c for c in cols if 'taxa' in c.lower() and 'entrega' in c.lower()), None)
     col_entregador = next((c for c in cols if 'entregador' in c.lower() or 'motoboy' in c.lower()), "Entregador")
 
-    # 2. Tratamento de Duplicados
+    # 2. Tratamento de Duplicados (Usa o ID curto para não contar o mesmo pedido duas vezes)
     if id_col:
         df = df.drop_duplicates(subset=[id_col]).copy()
 
@@ -103,13 +107,13 @@ def calcular_pagamentos(df, origem, base, valor_km, minimo, cache):
             data_raw = row.get("Data de criação") or row.get("Data") or ""
             turno = identificar_turno(data_raw)
             
-            # Formatação do ID do pedido para remover .0 (ex: 15.0 vira 15)
+            # Formatação do ID do pedido para remover .0 (ex: 1.0 vira 1)
             id_ped_raw = row.get(id_col, "S/N")
             if pd.isna(id_ped_raw) or id_ped_raw == "":
                 id_ped = "S/N"
             else:
                 try:
-                    # Converte para int e depois string para limpar o ".0"
+                    # Tenta converter para inteiro para limpar casas decimais se houver
                     id_ped = str(int(float(id_ped_raw)))
                 except:
                     id_ped = str(id_ped_raw)
