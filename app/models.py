@@ -21,7 +21,7 @@ class Historico(db.Model):
     faturamento_pedidos = db.Column(db.Float, default=0.0)
     taxas_clientes = db.Column(db.Float, default=0.0)
     turno = db.Column(db.String(50))
-    # Relacionamento para facilitar a exclusão em cascata
+    erros = db.Column(db.Text)  # <--- ADICIONE ESTA LINHA
     detalhes = db.relationship('HistoricoMotoboy', backref='pai', cascade="all, delete-orphan")
 
 class HistoricoMotoboy(db.Model):

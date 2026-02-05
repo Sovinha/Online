@@ -111,7 +111,7 @@ def dashboard_motoboys():
                            todas_lojas=list(cfg.get("lojas", {}).keys()))
 
 # ======================================================
-# CÁLCULOS E HISTÓRICO (CONEXÃO SUPABASE)
+# CÁLCULOS E HISTÓRICO
 # ======================================================
 
 @bp.route("/calcular-rotas")
@@ -153,7 +153,6 @@ def calcular_confirmar():
     ajustes = data.get("ajustes", {})
 
     try:
-        # Criação do cabeçalho do histórico
         historico = Historico(
             loja=data.get("loja"),
             faturamento_pedidos=float(fin.get("faturamento", 0)),
@@ -162,10 +161,9 @@ def calcular_confirmar():
         )
         
         db.session.add(historico)
-        db.session.flush() # Para obter o ID do histórico antes do commit final
+        db.session.flush() 
 
         total_pago_geral = 0
-        
         for r in resumo:
             aj = ajustes.get(r["entregador"], {"valor": 0, "motivo": ""})
             v_final = float(r["total"]) + float(aj["valor"])
@@ -189,7 +187,6 @@ def calcular_confirmar():
         historico.total = total_pago_geral
         db.session.commit()
         return jsonify({"ok": True})
-
     except Exception as e:
         db.session.rollback()
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -219,34 +216,56 @@ def historico_detalhes(id):
         "loja": h.loja, "data": h.data.strftime("%d/%m/%Y"), "turno": h.turno,
         "faturamento": h.faturamento_pedidos, "taxas_clientes": h.taxas_clientes,
         "pago_motoboys": h.total, "cobertura": round(cobertura, 2),
+        "erros": h.erros, # Importante para o JavaScript
         "dados": [{"id": d.id, "motoboy": d.motoboy, "entregas": d.entregas, 
                    "km_medio": round(d.km_total/d.entregas, 2) if d.entregas > 0 else 0,
                    "valor_final": d.valor_final, "motivo": d.motivo_ajuste, "pedidos": d.pedidos} for d in detalhes]
     })
 
+@bp.route("/historico/salvar-erro/<int:id>", methods=["POST"])
+@login_required
+def salvar_erro(id):
+    try:
+        h = Historico.query.get_or_404(id)
+        dados = request.json
+        h.erros = dados.get("erro")
+        db.session.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 @bp.route("/historico/editar", methods=["POST"])
 @login_required
 def historico_editar():
-    dados = request.json.get("dados", [])
-    h_id = None
-    for item in dados:
-        m = HistoricoMotoboy.query.get(item['id'])
-        if m:
-            m.valor_final = float(item['valor'])
-            m.motivo_ajuste = item['motivo']
-            h_id = m.historico_id
-    if h_id:
-        h = Historico.query.get(h_id)
-        h.total = db.session.query(func.sum(HistoricoMotoboy.valor_final)).filter_by(historico_id=h_id).scalar()
-        db.session.commit()
-    return jsonify({"ok": True})
+    try:
+        dados = request.json.get("dados", [])
+        h_id = None
+        for item in dados:
+            m = HistoricoMotoboy.query.get(item['id'])
+            if m:
+                m.valor_final = float(item['valor'])
+                m.motivo_ajuste = item['motivo']
+                h_id = m.historico_id
+        if h_id:
+            h = Historico.query.get(h_id)
+            h.total = db.session.query(func.sum(HistoricoMotoboy.valor_final)).filter_by(historico_id=h_id).scalar()
+            db.session.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @bp.route("/historico/excluir/<int:id>", methods=["POST"])
 @login_required
 def historico_excluir(id):
-    db.session.delete(Historico.query.get_or_404(id))
-    db.session.commit()
-    return jsonify({"ok": True})
+    try:
+        db.session.delete(Historico.query.get_or_404(id))
+        db.session.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 # ======================================================
 # EXPORTAÇÃO E COMPRAS
@@ -293,12 +312,16 @@ def add_item_compra(setor):
 
 @bp.route('/update_item_v2/<int:id>', methods=['POST'])
 def update_item_v2(id):
-    item = ItemCompra.query.get_or_404(id)
-    item.quantidade = int(request.form.get('quantidade', 0))
-    item.quem_pediu = request.form.get('colaborador_nome', 'ANÔNIMO').upper()
-    item.data = get_br_time() 
-    db.session.commit()
-    return redirect(request.referrer)
+    try:
+        item = ItemCompra.query.get_or_404(id)
+        item.quantidade = int(request.form.get('quantidade', 0))
+        item.quem_pediu = request.form.get('colaborador_nome', 'ANÔNIMO').upper()
+        item.data = get_br_time() 
+        db.session.commit()
+        return redirect(request.referrer)
+    except Exception:
+        db.session.rollback()
+        return redirect(request.referrer)
 
 @bp.route('/colaborador/delete/<int:id>', methods=['POST'])
 def delete_item(id):
