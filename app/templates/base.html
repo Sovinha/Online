@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filipéia Trattoria – Gestão</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+
+    <script>
+        (function () {
+            const theme = localStorage.getItem("theme") || "light";
+            document.documentElement.setAttribute("data-bs-theme", theme);
+        })();
+    </script>
+    
+    <style>
+        :root { --brand-color: #5c2c3b; }
+        .navbar { background-color: var(--brand-color) !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .nav-link { transition: all 0.2s; border-bottom: 2px solid transparent; }
+        .nav-link:hover { opacity: 0.9; color: #fff !important; border-bottom: 2px solid rgba(255,255,255,0.5); }
+        /* Realce para a página atual */
+        .navbar-nav .nav-link.active { border-bottom: 2px solid white; fw-bold; }
+        .alert { border: none; border-left: 5px solid; }
+    </style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark d-print-none">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/">
+            <i class="bi bi-egg-fried"></i> Filipéia Trattoria
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'main.colaborador_selecao' %}active{% endif %}" href="{{ url_for('main.colaborador_selecao') }}">
+                        <i class="bi bi-cart-fill"></i> Compras Setores
+                    </a>
+                </li>
+
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">📊 Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.dashboard_motoboys' %}active{% endif %}" href="{{ url_for('main.dashboard_motoboys') }}">🏍️ Motoboys</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.calcular_rotas' %}active{% endif %}" href="{{ url_for('main.calcular_rotas') }}">🧮 Calcular</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.historico' %}active{% endif %}" href="{{ url_for('main.historico') }}">📂 Histórico</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.compras_geral' %}active{% endif %}" href="{{ url_for('main.compras_geral') }}">🛒 Compras Geral</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.relatorios_exportar') }}">📑 Relatórios</a>
+                    </li>
+                {% endif %}
+            </ul>
+
+            <div class="d-flex align-items-center gap-2">
+                <button id="toggleTheme" class="btn btn-outline-light btn-sm" title="Alternar Tema">
+                    <i class="bi bi-moon-stars"></i>
+                </button>
+
+                {% if current_user.is_authenticated %}
+                    <span class="text-white-50 small me-2 d-none d-lg-inline">Olá, {{ current_user.username }}</span>
+                    <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-sm">
+                        <i class="bi bi-box-arrow-right"></i> Sair
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('main.login') }}" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-person-lock"></i> Login Admin
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4 mb-5">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show shadow-sm" role="alert">
+            {% if category == 'success' %}<i class="bi bi-check-circle-fill me-2"></i>{% elif category == 'danger' %}<i class="bi bi-exclamation-triangle-fill me-2"></i>{% else %}<i class="bi bi-info-circle-fill me-2"></i>{% endif %}
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Lógica de Troca de Tema (Refatorada para maior clareza)
+    const themeBtn = document.getElementById("toggleTheme");
+    const html = document.documentElement;
+
+    const updateIcon = (theme) => {
+        themeBtn.innerHTML = theme === "dark" 
+            ? '<i class="bi bi-brightness-high"></i>' 
+            : '<i class="bi bi-moon-stars"></i>';
+    };
+
+    // Inicializa ícone
+    updateIcon(html.getAttribute("data-bs-theme"));
+
+    themeBtn.onclick = () => {
+        const currentTheme = html.getAttribute("data-bs-theme");
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        
+        html.setAttribute("data-bs-theme", newTheme);
+        localStorage.setItem("theme", newTheme);
+        updateIcon(newTheme);
+    };
+</script>
+
+</body>
+</html>

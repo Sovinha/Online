@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5" style="max-width: 500px;">
+    <div class="card border-0 shadow-lg p-4 text-center">
+        <h4 class="mb-4 fw-bold">Identificação</h4>
+        
+        <label class="d-block text-start text-muted mb-2">Nome do Colaborador</label>
+        <input type="text" id="nome_colab" class="form-control form-control-lg mb-4" placeholder="Ex: João" autocomplete="off">
+
+        <label class="d-block text-start text-muted mb-2">Selecione o Setor</label>
+        <div class="row g-2 mb-4">
+            <div class="col-4">
+                <button onclick="selecionar('ATEND')" id="btn-ATEND" class="btn btn-outline-dark w-100 py-3 sector-btn">
+                    <i class="bi bi-cup-hot fs-3"></i><br><small class="fw-bold">ATEND.</small>
+                </button>
+            </div>
+            <div class="col-4">
+                <button onclick="selecionar('COZINHA')" id="btn-COZINHA" class="btn btn-outline-dark w-100 py-3 sector-btn">
+                    <i class="bi bi-egg-fried fs-3"></i><br><small class="fw-bold">COZINHA</small>
+                </button>
+            </div>
+            <div class="col-4">
+                <button onclick="selecionar('PRE-PREP')" id="btn-PRE-PREP" class="btn btn-outline-dark w-100 py-3 sector-btn">
+                    <i class="bi bi-clipboard-check fs-3"></i><br><small class="fw-bold">PRÉ-PREP</small>
+                </button>
+            </div>
+        </div>
+
+        <button id="btn-entrar" disabled onclick="entrar()" class="btn btn-secondary w-100 py-3 fs-5 fw-bold shadow-sm">
+            Entrar
+        </button>
+    </div>
+</div>
+
+<script>
+let setorSelecionado = "";
+
+function selecionar(setor) {
+    setorSelecionado = setor;
+    // Remove o destaque de todos os botões de setor
+    document.querySelectorAll('.sector-btn').forEach(b => {
+        b.classList.remove('btn-dark');
+        b.classList.add('btn-outline-dark');
+    });
+    
+    // Destaca o botão selecionado
+    const btn = document.getElementById('btn-' + setor);
+    btn.classList.remove('btn-outline-dark');
+    btn.classList.add('btn-dark');
+    
+    // Ativa o botão de entrar
+    const btnEntrar = document.getElementById('btn-entrar');
+    btnEntrar.classList.remove('btn-secondary');
+    btnEntrar.classList.add('btn-primary');
+    btnEntrar.disabled = false;
+}
+
+function entrar() {
+    const nome = document.getElementById('nome_colab').value.trim();
+    if(!nome) { 
+        alert("Por favor, digite seu nome antes de entrar."); 
+        return; 
+    }
+    
+    // Salva o nome para usar na lista depois (opcional para exibir "Olá, João")
+    localStorage.setItem('colaborador_nome', nome);
+    
+    // Redireciona para a rota definida no seu routes.py: /colaborador/lista/<setor>
+    window.location.href = "/colaborador/lista/" + setorSelecionado;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">🧮 Calcular Pagamentos</h3>
+    <span class="badge bg-secondary">Versão 2.0</span>
+</div>
+
+<form id="formCalculo" enctype="multipart/form-data" class="card card-body shadow-sm mb-4 border-0">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label fw-bold small">Unidade / Loja</label>
+            <select name="loja" class="form-select" required>
+                <option value="" disabled selected>Selecione a loja...</option>
+                {% for key, loja in lojas.items() %}
+                    <option value="{{ key }}">{{ loja.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label fw-bold small">Planilha de Entregas (.xlsx ou .csv)</label>
+            <input type="file" name="planilha" class="form-control" required>
+        </div>
+    </div>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-4">
+            <label class="small fw-bold text-muted">Diária Base (R$)</label>
+            <input type="number" step="0.01" name="base" class="form-control" value="{{ base }}">
+        </div>
+        <div class="col-md-4">
+            <label class="small fw-bold text-muted">Valor por KM (R$)</label>
+            <input type="number" step="0.01" name="km" class="form-control" value="{{ km }}">
+        </div>
+        <div class="col-md-4">
+            <label class="small fw-bold text-muted">Mínimo por Entrega (R$)</label>
+            <input type="number" step="0.01" name="minimo" class="form-control" value="{{ minimo }}">
+        </div>
+    </div>
+
+    <div class="d-grid">
+        <button type="submit" class="btn btn-primary py-2 fw-bold" id="btnCalcular">
+            <i class="bi bi-play-fill"></i> Processar e Visualizar Preview
+        </button>
+    </div>
+</form>
+
+<div class="modal fade" id="modalAjustes" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title"><i class="bi bi-sliders me-2"></i> Ajustes e Revisão Final</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body bg-light">
+        <div id="loadingConfirmar" class="text-center d-none my-4">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Salvando no banco de dados e gerando arquivos...</p>
+        </div>
+
+        <div class="table-responsive bg-white rounded shadow-sm">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Motoboy</th>
+                        <th class="text-center">Entregas</th>
+                        <th class="text-center">Calculado (R$)</th>
+                        <th style="width: 150px;">Ajuste (R$)</th>
+                        <th>Motivo do Ajuste</th>
+                        <th class="text-end">Final (R$)</th>
+                    </tr>
+                </thead>
+                <tbody id="listaAjustes">
+                    </tbody>
+            </table>
+        </div>
+      </div>
+
+      <div class="modal-footer bg-white border-top-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button id="confirmarAjustes" class="btn btn-success px-4 fw-bold">
+            <i class="bi bi-check-all"></i> Confirmar e Salvar Histórico
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="secaoResultado" class="card shadow-sm border-0 d-none">
+    <div class="card-body text-center py-5">
+        <div class="mb-4">
+            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+        </div>
+        <h4 class="fw-bold">Processamento Concluído!</h4>
+        <p class="text-muted">Os dados foram salvos e os relatórios estão prontos para download.</p>
+        
+        <div class="d-flex justify-content-center gap-2 mt-4">
+            <a id="btnTxt" class="btn btn-dark px-4">
+                <i class="bi bi-file-earmark-text"></i> Download TXT (Banco)
+            </a>
+            <a id="btnPdf" class="btn btn-danger px-4">
+                <i class="bi bi-file-earmark-pdf"></i> Download PDF (Relatório)
+            </a>
+            <a href="{{ url_for('main.historico') }}" class="btn btn-outline-primary px-4">
+                <i class="bi bi-clock-history"></i> Ir para Histórico
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/calcular.js"></script>
+
+{% endblock %}

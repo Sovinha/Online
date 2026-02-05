@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">🏆 Ranking de Performance</h3>
+        <div>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary btn-sm d-print-none me-2">
+                ⬅️ Voltar ao Geral
+            </a>
+            <button onclick="window.print()" class="btn btn-outline-dark btn-sm d-print-none">
+                🖨️ Imprimir Relatório
+            </button>
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow-sm d-print-none border-0">
+        <div class="card-body bg-light rounded">
+            <form method="GET" action="{{ url_for('main.dashboard_motoboys') }}" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">Unidade</label>
+                    <select name="loja" class="form-select form-select-sm">
+                        <option value="">Todas as Lojas</option>
+                        {% for l in todas_lojas %}
+                        <option value="{{ l }}" {% if loja == l %}selected{% endif %}>{{ l|upper }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">Data Início</label>
+                    <input type="date" name="data_inicio" class="form-control form-control-sm" value="{{ data_inicio }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">Data Fim</label>
+                    <input type="date" name="data_fim" class="form-control form-control-sm" value="{{ data_fim }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">🔍 Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mb-4 g-3">
+        {% if dados %}
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50 small fw-bold">LÍDER DO PERÍODO</h6>
+                    <h3 class="mb-0">{{ dados[0][0] }}</h3>
+                    <small>{{ dados[0][1] }} entregas realizadas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-success text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50 small fw-bold">TOTAL PAGO NO PERÍODO</h6>
+                    <h4 class="mb-0">R$ {{ "%.2f"|format(total_pago) }}</h4>
+                    <small>Soma total de fretes + ajustes</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-info text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50 small fw-bold">VOLUME TOTAL</h6>
+                    <h4 class="mb-0">{{ total_pedidos }}</h4>
+                    <small>Pedidos entregues no período</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-bottom">
+            <h5 class="mb-0 py-1 fw-bold">Classificação Detalhada</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="width: 80px;">Pos.</th>
+                            <th>Motoboy</th>
+                            <th class="text-center">Entregas</th>
+                            <th>Eficiência (KM Médio)</th>
+                            <th class="text-end px-4">Total Recebido</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m, ent, km_med, valor in dados %}
+                        <tr>
+                            <td class="text-center">
+                                {% if loop.index == 1 %}<span class="fs-4">🥇</span>
+                                {% elif loop.index == 2 %}<span class="fs-4">🥈</span>
+                                {% elif loop.index == 3 %}<span class="fs-4">🥉</span>
+                                {% else %}<span class="badge rounded-pill bg-light text-dark border">{{ loop.index }}º</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ m }}</strong></td>
+                            <td class="text-center"><span class="badge bg-secondary">{{ ent }}</span></td>
+                            <td>
+                                <div class="d-flex align-items-center" style="min-width: 150px;">
+                                    <span class="me-2 small">{{ "%.2f"|format(km_med or 0) }} km</span>
+                                    {% set max_km = 10 %}
+                                    <div class="progress flex-grow-1" style="height: 6px;">
+                                        <div class="progress-bar bg-info" style="width: {{ ((km_med or 0) / max_km) * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-end fw-bold text-success px-4">
+                                R$ {{ "%.2f"|format(valor or 0) }}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="fs-1 d-block mb-2">📥</i>
+                                Nenhum dado encontrado para os filtros selecionados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        .btn, .d-print-none, form, .badge { display: none !important; }
+        .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+        .table-light { background-color: #fff !important; color: #000 !important; }
+        body { background-color: white !important; }
+    }
+</style>
+
+{% endblock %}

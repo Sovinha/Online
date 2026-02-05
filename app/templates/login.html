@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row justify-content-center mt-5">
+  <div class="col-md-4">
+    <div class="card shadow">
+      <div class="card-body">
+        <h4 class="text-center mb-4">Acesso ao Sistema</h4>
+
+        {% if error %}
+          <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label">Usuário</label>
+            <input type="text" name="username" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Senha</label>
+            <input type="password" name="password" class="form-control" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">
+            Entrar
+          </button>
+        </form>
+
+        <hr class="my-4">
+<div class="text-center">
+    <p class="text-muted small mb-3">Acesso rápido para a equipe:</p>
+    <a href="{{ url_for('main.colaborador_selecao') }}" class="btn btn-outline-secondary w-100 py-2">
+         <i class="bi bi-list-check me-2"></i> Lista de Compras (Colaborador)
+    </a>
+</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">📊 Dashboard Financeiro</h3>
+    
+    <form class="row g-2 d-print-none" method="GET">
+        <div class="col-auto">
+            <input type="date" name="data_inicio" class="form-control form-control-sm" title="Data Inicial" value="{{ request.args.get('data_inicio', '') }}">
+        </div>
+        <div class="col-auto">
+            <input type="date" name="data_fim" class="form-control form-control-sm" title="Data Final" value="{{ request.args.get('data_fim', '') }}">
+        </div>
+        
+        <div class="col-auto">
+            <select name="loja" class="form-select form-select-sm">
+                <option value="">Todas as Lojas</option>
+                {% for loja in todas_lojas %}
+                <option value="{{ loja }}" {% if request.args.get('loja') == loja %}selected{% endif %}>{{ loja }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <select name="turno" class="form-select form-select-sm">
+                <option value="">Todos os Turnos</option>
+                <option value="Almoço" {% if request.args.get('turno') == 'Almoço' %}selected{% endif %}>Almoço</option>
+                <option value="Jantar" {% if request.args.get('turno') == 'Jantar' %}selected{% endif %}>Jantar</option>
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary btn-sm">Limpar</a>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('main.dashboard_motoboys') }}" class="btn btn-info btn-sm text-white">Ver Motoboys</a>
+        </div>
+    </form>
+</div>
+
+<div class="row mb-4 g-3">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-dark text-white h-100">
+            <div class="card-body">
+                <h6 class="text-secondary small fw-bold">FATURAMENTO TOTAL</h6>
+                <h3 class="mb-0">R$ {{ "%.2f"|format(fin_geral.faturamento|default(0)) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-primary text-white h-100">
+            <div class="card-body">
+                <h6 class="text-white-50 small fw-bold">TAXAS (CLIENTES)</h6>
+                <h3 class="mb-0">R$ {{ "%.2f"|format(fin_geral.taxas_clientes|default(0)) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-danger text-white h-100">
+            <div class="card-body">
+                <h6 class="text-white-50 small fw-bold">PAGO MOTOBOYS</h6>
+                <h3 class="mb-0">R$ {{ "%.2f"|format(total_geral|default(0)) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        {% set faturamento = fin_geral.taxas_clientes | float %}
+        {% set pago = total_geral | float %}
+        {% set cobertura = (faturamento / pago * 100) if pago > 0 else 0 %}
+        <div class="card shadow-sm border-0 {% if cobertura < 85 %}bg-warning{% else %}bg-success{% endif %} text-white h-100">
+            <div class="card-body">
+                <h6 class="text-white-50 small fw-bold">COBERTURA DE FRETE</h6>
+                <h3 class="mb-0">{{ "%.2f"|format(cobertura) }}%</h3>
+                <small class="text-white-50">Meta: > 85%</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+                <h6 class="fw-bold text-muted mb-3 text-start">Custos por Unidade</h6>
+                <div style="height: 300px;">
+                    <canvas id="graficoLoja"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+                <h6 class="fw-bold text-muted mb-3 text-start">Eficiência: Recebido vs Pago</h6>
+                <div style="height: 300px;">
+                    <canvas id="graficoEficiencia"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Passagem de dados segura do Jinja para o JavaScript
+    const dadosLoja = {
+        labels: {{ por_loja | map(attribute=0) | list | tojson | safe }},
+        values: {{ por_loja | map(attribute=1) | list | tojson | safe }}
+    };
+
+    const dadosFin = {
+        pago: {{ total_geral | default(0) | tojson | safe }},
+        recebido: {{ fin_geral.taxas_clientes | default(0) | tojson | safe }}
+    };
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+
+{% endblock %}

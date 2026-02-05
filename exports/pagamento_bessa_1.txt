@@ -1,0 +1,20 @@
+--- FECHAMENTO DE ENTREGAS ---
+Loja: BESSA
+Turno: Jantar
+Data: 30/01/2026 01:42
+------------------------------
+
+Motoboy: João
+   Entregas: 23
+   VALOR FINAL: R$ 168.23
+--------------------
+Motoboy: Alex
+   Entregas: 15
+   VALOR FINAL: R$ 106.50
+--------------------
+Motoboy: Anderson
+   Entregas: 13
+   VALOR FINAL: R$ 94.67
+--------------------
+
+TOTAL GERAL: R$ 369.40

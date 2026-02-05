@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container pb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0">Lista de Compras</h2>
+            <span class="badge bg-dark text-uppercase">Setor: {{ setor }}</span>
+        </div>
+        <a href="{{ url_for('main.colaborador_selecao') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Trocar Setor
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form action="{{ url_for('main.add_item_compra', setor=setor) }}" method="POST" class="row g-2">
+                <div class="col-8 col-md-10">
+                    <input type="text" name="nome" class="form-control" placeholder="Novo item para {{ setor }}..." required>
+                </div>
+                <div class="col-4 col-md-2">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-plus-lg"></i> Add
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        {% for item in itens %}
+        <div class="col-12 col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0 fw-bold">{{ item.nome }}</h5>
+                        <small class="text-muted">Quantidade: <b id="qtd-{{ item.id }}">{{ item.quantidade }}</b></small>
+                    </div>
+                    
+                    <div class="d-flex align-items-center gap-2">
+                        <form action="{{ url_for('main.update_item', id=item.id, acao='sub') }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-outline-danger btn-sm px-3">-</button>
+                        </form>
+                        
+                        <form action="{{ url_for('main.update_item', id=item.id, acao='add') }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-outline-success btn-sm px-3">+</button>
+                        </form>
+
+                        <form action="{{ url_for('main.delete_item', id=item.id) }}" method="POST" onsubmit="return confirm('Excluir este item?')" style="display:inline;">
+                            <button type="submit" class="btn btn-light btn-sm text-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-box-seam text-muted" style="font-size: 3rem;"></i>
+            <p class="mt-2 text-muted">Nenhum item cadastrado para o setor {{ setor }}.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="fixed-bottom p-3 text-center bg-white border-top shadow-lg">
+        <button onclick="enviarWhatsApp()" class="btn btn-success btn-lg w-100 fw-bold">
+            <i class="bi bi-whatsapp"></i> Enviar Lista de {{ setor }}
+        </button>
+    </div>
+</div>
+
+<script>
+function enviarWhatsApp() {
+    let nomeColaborador = localStorage.getItem('colaborador_nome') || 'Colaborador';
+    let setor = "{{ setor }}";
+    let texto = `*📋 PEDIDO: ${nomeColaborador} (${setor})*%0A%0A`;
+    
+    // Pega todos os itens da lista
+    let itens = document.querySelectorAll('.card h5');
+    let temItens = false;
+
+    itens.forEach(i => {
+        let nome = i.innerText;
+        let qtd = i.parentElement.querySelector('b').innerText;
+        if (parseInt(qtd) > 0) {
+            texto += `• ${nome}: *${qtd}*%0A`;
+            temItens = true;
+        }
+    });
+
+    if (!temItens) {
+        alert("Adicione quantidades aos itens primeiro!");
+        return;
+    }
+
+    window.open(`https://wa.me/5583999999999?text=${texto}`, '_blank'); // Substitua pelo seu número
+}
+</script>
+{% endblock %}

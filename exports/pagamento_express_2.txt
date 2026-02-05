@@ -1,0 +1,20 @@
+--- FECHAMENTO DE ENTREGAS ---
+Loja: EXPRESS
+Turno: Jantar
+Data: 30/01/2026 01:46
+------------------------------
+
+Motoboy: João
+   Entregas: 23
+   VALOR FINAL: R$ 269.61
+--------------------
+Motoboy: Alex
+   Entregas: 15
+   VALOR FINAL: R$ 182.20
+--------------------
+Motoboy: Anderson
+   Entregas: 13
+   VALOR FINAL: R$ 154.74
+--------------------
+
+TOTAL GERAL: R$ 606.55

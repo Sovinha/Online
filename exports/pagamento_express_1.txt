@@ -1,0 +1,24 @@
+--- FECHAMENTO DE ENTREGAS ---
+Loja: EXPRESS
+Turno: Almoço
+Data: 04/02/2026 20:50
+------------------------------
+
+Motoboy: Gilvan
+   Entregas: 20
+   VALOR FINAL: R$ 149.38
+--------------------
+Motoboy: Alex
+   Entregas: 18
+   VALOR FINAL: R$ 135.84
+--------------------
+Motoboy: Anderson
+   Entregas: 18
+   VALOR FINAL: R$ 142.40
+--------------------
+Motoboy: João
+   Entregas: 17
+   VALOR FINAL: R$ 123.15
+--------------------
+
+TOTAL GERAL: R$ 550.77

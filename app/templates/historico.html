@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    /* Ajustes para manter a tabela organizada */
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    /* Estilo para a caixa de IDs que aparece ao clicar na lupa */
+    .col-pedidos {
+        word-wrap: break-word;
+        white-space: normal !important;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        color: #495057;
+    }
+
+    .col-valor-final {
+        width: 140px;
+    }
+
+    .col-motoboy {
+        min-width: 140px;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>📋 Histórico de Cálculos</h3>
+    <a href="/calcular-rotas" class="btn btn-success">➕ Novo Cálculo</a>
+</div>
+
+<div class="card mb-4 shadow-sm">
+    <div class="card-body bg-light">
+        <form method="GET" action="/historico" class="row g-2">
+            <div class="col-md-3">
+                <label class="small fw-bold">Unidade/Loja</label>
+                <select name="loja" class="form-select">
+                    <option value="">Todas as Lojas</option>
+                    <option value="express" {% if loja == 'express' %}selected{% endif %}>Express</option>
+                    <option value="bessa" {% if loja == 'bessa' %}selected{% endif %}>Bessa</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="small fw-bold">Turno</label>
+                <select name="turno" class="form-select">
+                    <option value="">Todos os Turnos</option>
+                    <option value="Almoço" {% if turno == 'Almoço' %}selected{% endif %}>Almoço (Manhã)</option>
+                    <option value="Jantar" {% if turno == 'Jantar' %}selected{% endif %}>Jantar (Noite)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="small fw-bold">Data Específica</label>
+                <input type="date" name="data" class="form-control" value="{{ data_filtro }}">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Filtrar Resultados
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover table-bordered shadow-sm bg-white text-center">
+        <thead class="table-dark">
+            <tr>
+                <th>Data/Hora</th>
+                <th>Loja</th>
+                <th>Turno</th>
+                <th>Total Bruto</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for h in registros %}
+            <tr>
+                <td class="align-middle">{{ h.data.strftime("%d/%m/%Y %H:%M") }}</td>
+                <td class="align-middle">
+                    <span class="badge bg-secondary px-3">{{ h.loja|upper }}</span>
+                </td>
+                <td class="align-middle">
+                    {% if h.turno == 'Almoço' %}
+                        <span class="badge bg-warning text-dark">☀️ Almoço</span>
+                    {% else %}
+                        <span class="badge bg-info text-dark">🌙 Jantar</span>
+                    {% endif %}
+                </td>
+                <td class="align-middle fw-bold text-success">R$ {{ "%.2f"|format(h.total) }}</td>
+                <td class="text-center">
+                    <div class="btn-group shadow-sm">
+                        <button class="btn btn-outline-secondary btn-sm"
+                                onclick="abrirModal({{ h.id }}, true)" title="Visualizar">👁️ Ver</button>
+                        
+                        <button class="btn btn-outline-primary btn-sm"
+                                onclick="abrirModal({{ h.id }}, false)" title="Editar">✏️ Editar</button>
+                        
+                        <button class="btn btn-outline-danger btn-sm"
+                                onclick="excluirRegistro({{ h.id }})" title="Excluir">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center text-muted py-4">Nenhum cálculo encontrado para os filtros selecionados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="modalHistorico" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="modalTitulo text-center">📊 Detalhamento do Fechamento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle">
+                        <thead>
+                            <tr class="table-secondary text-center">
+                                <th class="col-motoboy">Motoboy</th>
+                                <th>Entregas</th>
+                                <th>KM Médio</th>
+                                <th class="col-valor-final text-center">Valor Final (R$)</th>
+                                <th>Motivo do Ajuste</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button id="btnWhatsapp" class="btn btn-success" onclick="enviarWhatsapp()">
+                    <i class="bi bi-whatsapp"></i> Enviar via WhatsApp
+                </button>
+
+                <button id="btnSalvar" class="btn btn-primary" onclick="salvarEdicao()">
+                    <i class="bi bi-save"></i> Salvar Alterações
+                </button>
+
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/historico.js"></script>
+
+{% endblock %}
