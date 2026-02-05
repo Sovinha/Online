@@ -9,9 +9,7 @@ def create_app():
     connect_args = {}
 
     if database_url:
-        # Limpa a URL de parâmetros que o psycopg2 não entende
         if "prepared_statement=" in database_url:
-            # Remove o parâmetro da string para não dar erro de DSN inválida
             import urllib.parse as urlparse
             url_parts = list(urlparse.urlparse(database_url))
             query = dict(urlparse.parse_qsl(url_parts[4]))
@@ -19,11 +17,9 @@ def create_app():
             url_parts[4] = urlparse.urlencode(query)
             database_url = urlparse.urlunparse(url_parts)
 
-        # Se for Supabase porta 6543, injetamos a configuração via connect_args
         if ":6543" in database_url:
             connect_args["options"] = "-c prepared_statements=off"
 
-        # Correção padrão de protocolo
         if database_url.startswith("postgres://"):
             database_url = database_url.replace("postgres://", "postgresql://", 1)
 
@@ -31,11 +27,10 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chave-de-seguranca-padrao')
 
-    # Aplicando as correções no Engine
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         "pool_pre_ping": True,
         "pool_recycle": 300,
-        "connect_args": connect_args  # <--- Aqui entra a correção do erro
+        "connect_args": connect_args
     }
 
     db.init_app(app)
@@ -47,8 +42,22 @@ def create_app():
         
         try:
             db.create_all()
+            
+            # SCRIPT DE CRIAÇÃO DE USUÁRIO INICIAL
+            from app.models import User
+            from werkzeug.security import generate_password_hash
+            
+            if not User.query.filter_by(username='admin').first():
+                admin_user = User(
+                    username='admin',
+                    password=generate_password_hash('admin123')
+                )
+                db.session.add(admin_user)
+                db.session.commit()
+                print(">>> Usuário 'admin' criado com senha 'admin123'")
+                
             print("Conexão estável com Supabase estabelecida.")
         except Exception as e:
-            print(f"Nota: {e}")
+            print(f"Nota/Erro no banco: {e}")
 
     return app
