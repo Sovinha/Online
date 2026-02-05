@@ -8,7 +8,6 @@ import os
 from io import BytesIO
 from datetime import datetime
 from app.extensions import db
-# Importa a função e os modelos necessários
 from app.models import User, Historico, HistoricoMotoboy, ItemCompra, get_br_time
 
 bp = Blueprint("main", __name__)
@@ -112,7 +111,7 @@ def dashboard_motoboys():
                            todas_lojas=list(cfg.get("lojas", {}).keys()))
 
 # ======================================================
-# CÁLCULOS E HISTÓRICO
+# CÁLCULOS E HISTÓRICO (CONEXÃO SUPABASE)
 # ======================================================
 
 @bp.route("/calcular-rotas")
@@ -154,7 +153,7 @@ def calcular_confirmar():
     ajustes = data.get("ajustes", {})
 
     try:
-        # 1. Cria o registro Pai
+        # Criação do cabeçalho do histórico
         historico = Historico(
             loja=data.get("loja"),
             faturamento_pedidos=float(fin.get("faturamento", 0)),
@@ -163,19 +162,16 @@ def calcular_confirmar():
         )
         
         db.session.add(historico)
-        # COMMIT IMEDIATO: Força o Supabase a gerar o ID e salvar o registro pai
-        db.session.commit() 
-        db.session.refresh(historico) 
+        db.session.flush() # Para obter o ID do histórico antes do commit final
 
         total_pago_geral = 0
         
-        # 2. Cria os registros Filhos (Motoboys)
         for r in resumo:
             aj = ajustes.get(r["entregador"], {"valor": 0, "motivo": ""})
             v_final = float(r["total"]) + float(aj["valor"])
             
             m = HistoricoMotoboy(
-                historico_id=historico.id, # ID garantido pelo refresh()
+                historico_id=historico.id, 
                 motoboy=r["entregador"], 
                 entregas=int(r["entregas"]),
                 km_total=float(r["media_km"]) * int(r["entregas"]), 
@@ -185,29 +181,24 @@ def calcular_confirmar():
                 motivo_ajuste=aj["motivo"],
                 loja=historico.loja, 
                 turno=r["turno"], 
-                pedidos=str(r.get("pedidos", "")) # Salva como string "101, 102..."
+                pedidos=str(r.get("pedidos", ""))
             )
             db.session.add(m)
             total_pago_geral += v_final
 
-        # 3. Atualiza o total final no Pai e encerra
         historico.total = total_pago_geral
         db.session.commit()
-        
         return jsonify({"ok": True})
 
     except Exception as e:
-        db.session.rollback() # Se algo der errado, limpa a sujeira
-        print(f"ERRO CRÍTICO NO SALVAMENTO: {e}")
+        db.session.rollback()
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @bp.route("/historico")
 @login_required
 def historico():
     cfg = load_config()
-    loja = request.args.get("loja")
-    turno = request.args.get("turno")
-    data_f = request.args.get("data")
+    loja, turno, data_f = request.args.get("loja"), request.args.get("turno"), request.args.get("data")
     
     q = Historico.query
     if loja: q = q.filter(Historico.loja == loja)
@@ -232,20 +223,6 @@ def historico_detalhes(id):
                    "km_medio": round(d.km_total/d.entregas, 2) if d.entregas > 0 else 0,
                    "valor_final": d.valor_final, "motivo": d.motivo_ajuste, "pedidos": d.pedidos} for d in detalhes]
     })
-
-# --- NOVA ROTA DE SALVAMENTO DE ERROS ---
-@bp.route('/historico/salvar-erro/<int:id>', methods=['POST'])
-@login_required
-def salvar_erro_historico(id):
-    try:
-        dados = request.get_json()
-        h = Historico.query.get_or_404(id)
-        h.erros = dados.get('erro')
-        db.session.commit()
-        return jsonify({"ok": True}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"ok": False, "error": str(e)}), 500
 
 @bp.route("/historico/editar", methods=["POST"])
 @login_required
@@ -272,39 +249,24 @@ def historico_excluir(id):
     return jsonify({"ok": True})
 
 # ======================================================
-# EXPORTAÇÃO
+# EXPORTAÇÃO E COMPRAS
 # ======================================================
 
 @bp.route("/relatorios/exportar")
 @login_required
 def relatorios_exportar():
     dados = HistoricoMotoboy.query.all()
-    lista = []
-    for d in dados:
-        lista.append({
-            "Data": d.data.strftime("%d/%m/%Y"),
-            "Loja": d.loja,
-            "Turno": d.turno,
-            "Motoboy": d.motoboy,
-            "Entregas": d.entregas,
-            "Valor Final": d.valor_final,
-            "Motivo Ajuste": d.motivo_ajuste
-        })
+    df = pd.DataFrame([{
+        "Data": d.data.strftime("%d/%m/%Y"), "Loja": d.loja, "Turno": d.turno,
+        "Motoboy": d.motoboy, "Entregas": d.entregas, "Valor Final": d.valor_final,
+        "Motivo Ajuste": d.motivo_ajuste
+    } for d in dados])
 
-    df = pd.DataFrame(lista)
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Relatorio')
     output.seek(0)
-    
-    return send_file(output, 
-                     download_name=f"relatorio_{datetime.now().strftime('%Y%m%d')}.xlsx", 
-                     as_attachment=True,
-                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-# ======================================================
-# COMPRAS E COLABORADORES
-# ======================================================
+    return send_file(output, download_name=f"relatorio_{datetime.now().strftime('%Y%m%d')}.xlsx", as_attachment=True)
 
 @bp.route('/colaborador')
 def colaborador_selecao():
@@ -322,17 +284,11 @@ def add_item_compra(setor):
     cat_selecionada = request.form.get('categoria')
     categoria_final = (cat_digitada if cat_digitada else cat_selecionada) or 'OUTROS'
     
-    if not nome:
-        return redirect(url_for('main.colaborador_lista', setor=setor))
-
-    novo_item = ItemCompra(
-        nome=nome.upper().strip(), 
-        setor=setor.upper(), 
-        categoria=categoria_final.upper().strip(),
-        quantidade=0
-    )
-    db.session.add(novo_item)
-    db.session.commit()
+    if nome:
+        novo_item = ItemCompra(nome=nome.upper().strip(), setor=setor.upper(), 
+                               categoria=categoria_final.upper().strip(), quantidade=0)
+        db.session.add(novo_item)
+        db.session.commit()
     return redirect(url_for('main.colaborador_lista', setor=setor))
 
 @bp.route('/update_item_v2/<int:id>', methods=['POST'])
@@ -341,7 +297,6 @@ def update_item_v2(id):
     item.quantidade = int(request.form.get('quantidade', 0))
     item.quem_pediu = request.form.get('colaborador_nome', 'ANÔNIMO').upper()
     item.data = get_br_time() 
-    
     db.session.commit()
     return redirect(request.referrer)
 
