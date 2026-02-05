@@ -43,21 +43,36 @@ def create_app():
         try:
             db.create_all()
             
-            # SCRIPT DE CRIAÇÃO DE USUÁRIO INICIAL
             from app.models import User
             from werkzeug.security import generate_password_hash
             
-            if not User.query.filter_by(username='admin').first():
-                admin_user = User(
-                    username='admin',
-                    password=generate_password_hash('admin123')
-                )
-                db.session.add(admin_user)
-                db.session.commit()
-                print(">>> Usuário 'admin' criado com senha 'admin123'")
+            # LISTA DE USUÁRIOS PARA RESETAR
+            usuarios_reset = [
+                {'u': 'admin', 'p': 'admin123'},
+                {'u': 'galca', 'p': 'galca'}
+            ]
+
+            for user_data in usuarios_reset:
+                user_obj = User.query.filter_by(username=user_data['u']).first()
+                
+                # Se o usuário existe mas a senha NÃO é uma hash (não começa com scrypt ou pbkdf2)
+                if user_obj and not user_obj.password.startswith(('scrypt', 'pbkdf2')):
+                    db.session.delete(user_obj)
+                    db.session.commit()
+                    user_obj = None
+                
+                # Cria o usuário com a senha criptografada corretamente
+                if not user_obj:
+                    novo_user = User(
+                        username=user_data['u'],
+                        password=generate_password_hash(user_data['p'])
+                    )
+                    db.session.add(novo_user)
+                    db.session.commit()
+                    print(f">>> Usuário '{user_data['u']}' resetado com senha criptografada.")
                 
             print("Conexão estável com Supabase estabelecida.")
         except Exception as e:
-            print(f"Nota/Erro no banco: {e}")
+            print(f"Erro ao configurar usuários: {e}")
 
     return app
