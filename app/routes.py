@@ -153,32 +153,53 @@ def calcular_confirmar():
     fin = data.get("financeiro", {})
     ajustes = data.get("ajustes", {})
 
-    historico = Historico(
-        loja=data.get("loja"),
-        faturamento_pedidos=float(fin.get("faturamento", 0)),
-        taxas_clientes=float(fin.get("taxas_clientes", 0)),
-        turno=resumo[0].get("turno", "Jantar") if resumo else "Jantar"
-    )
-    db.session.add(historico)
-    db.session.flush()
-
-    total_pago_geral = 0
-    for r in resumo:
-        aj = ajustes.get(r["entregador"], {"valor": 0, "motivo": ""})
-        v_final = float(r["total"]) + float(aj["valor"])
-        
-        m = HistoricoMotoboy(
-            historico_id=historico.id, motoboy=r["entregador"], entregas=r["entregas"],
-            km_total=r["media_km"] * r["entregas"], valor_original=r["total"],
-            ajuste=aj["valor"], valor_final=v_final, motivo_ajuste=aj["motivo"],
-            loja=historico.loja, turno=r["turno"], pedidos=str(r.get("pedidos", ""))
+    try:
+        # 1. Cria o registro Pai
+        historico = Historico(
+            loja=data.get("loja"),
+            faturamento_pedidos=float(fin.get("faturamento", 0)),
+            taxas_clientes=float(fin.get("taxas_clientes", 0)),
+            turno=resumo[0].get("turno", "Jantar") if resumo else "Jantar"
         )
-        db.session.add(m)
-        total_pago_geral += v_final
+        
+        db.session.add(historico)
+        # COMMIT IMEDIATO: Força o Supabase a gerar o ID e salvar o registro pai
+        db.session.commit() 
+        db.session.refresh(historico) 
 
-    historico.total = total_pago_geral
-    db.session.commit()
-    return jsonify({"ok": True})
+        total_pago_geral = 0
+        
+        # 2. Cria os registros Filhos (Motoboys)
+        for r in resumo:
+            aj = ajustes.get(r["entregador"], {"valor": 0, "motivo": ""})
+            v_final = float(r["total"]) + float(aj["valor"])
+            
+            m = HistoricoMotoboy(
+                historico_id=historico.id, # ID garantido pelo refresh()
+                motoboy=r["entregador"], 
+                entregas=int(r["entregas"]),
+                km_total=float(r["media_km"]) * int(r["entregas"]), 
+                valor_original=float(r["total"]),
+                ajuste=float(aj["valor"]), 
+                valor_final=v_final, 
+                motivo_ajuste=aj["motivo"],
+                loja=historico.loja, 
+                turno=r["turno"], 
+                pedidos=str(r.get("pedidos", "")) # Salva como string "101, 102..."
+            )
+            db.session.add(m)
+            total_pago_geral += v_final
+
+        # 3. Atualiza o total final no Pai e encerra
+        historico.total = total_pago_geral
+        db.session.commit()
+        
+        return jsonify({"ok": True})
+
+    except Exception as e:
+        db.session.rollback() # Se algo der errado, limpa a sujeira
+        print(f"ERRO CRÍTICO NO SALVAMENTO: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @bp.route("/historico")
 @login_required
