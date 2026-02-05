@@ -1,65 +1,88 @@
-// Variáveis globais para armazenar as instâncias dos gráficos
+// Variáveis globais para armazenar as instâncias
 let chartLoja = null;
 let chartEficiencia = null;
 
 function renderizarGraficos() {
-    // 1. Destruir gráficos existentes para evitar bugs ao filtrar
+    // 1. Destruir gráficos existentes para evitar sobreposição
     if (chartLoja) chartLoja.destroy();
     if (chartEficiencia) chartEficiencia.destroy();
 
-    // 2. Gráfico de Custos por Loja (Barras)
+    // Estilo comum para fontes
+    const fontStyle = { family: "'Helvetica Neue', 'Arial', sans-serif", size: 12 };
+
+    // 2. Gráfico de Custos por Loja (Barras Modernas)
     const ctxLoja = document.getElementById("graficoLoja").getContext("2d");
     chartLoja = new Chart(ctxLoja, {
         type: "bar",
         data: {
             labels: dadosLoja.labels,
             datasets: [{
-                label: "Total Gasto (R$)",
+                label: "Total Gasto",
                 data: dadosLoja.values,
-                backgroundColor: "#0d6efd"
+                backgroundColor: "rgba(13, 110, 253, 0.8)",
+                borderColor: "#0d6efd",
+                borderWidth: 1,
+                borderRadius: 8, // Barras arredondadas ficam mais modernas
+                hoverBackgroundColor: "#0a58ca"
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
+                legend: { display: false }, // Esconde legenda óbvia
                 tooltip: {
+                    padding: 12,
                     callbacks: {
-                        label: function(context) {
-                            return "R$ " + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-                        }
+                        label: (ctx) => ` R$ ${ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                     }
                 }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { drawBorder: false, color: "#f0f0f0" },
+                    ticks: { ...fontStyle, callback: (v) => 'R$ ' + v }
+                },
+                x: { grid: { display: false }, ticks: fontStyle }
             }
         }
     });
 
-    // 3. Gráfico de Eficiência (Comparativo)
+    // 3. Gráfico de Saúde Financeira (Rosca/Doughnut)
+    // Calculamos o quanto das taxas cobre o pagamento e quanto é "custo extra"
+    const prejuizo = Math.max(0, dadosFin.pago - dadosFin.recebido);
+    const coberto = dadosFin.recebido;
+
     const ctxEficiencia = document.getElementById("graficoEficiencia").getContext("2d");
     chartEficiencia = new Chart(ctxEficiencia, {
-        type: "bar",
+        type: "doughnut",
         data: {
-            labels: ["Comparativo de Fretes"],
-            datasets: [
-                {
-                    label: "Taxas Recebidas (Clientes)",
-                    data: [dadosFin.recebido],
-                    backgroundColor: "#198754"
-                },
-                {
-                    label: "Taxas Pagas (Motoboys)",
-                    data: [dadosFin.pago],
-                    backgroundColor: "#dc3545"
-                }
-            ]
+            labels: ["Coberto por Taxas", "Custo Empresa (Extra)"],
+            datasets: [{
+                data: [coberto, prejuizo],
+                backgroundColor: ["#198754", "#dc3545"],
+                hoverOffset: 15,
+                borderWidth: 0,
+                weight: 0.5
+            }]
         },
         options: {
             responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return 'R$ ' + value.toLocaleString('pt-BR');
+            maintainAspectRatio: false,
+            cutout: '70%', // Cria o efeito de rosca fina elegante
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { pointStyle: 'circle', usePointStyle: true, padding: 20, font: fontStyle }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const val = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const perc = ((val / total) * 100).toFixed(1);
+                            return ` R$ ${val.toLocaleString('pt-BR', {minimumFractionDigits: 2})} (${perc}%)`;
                         }
                     }
                 }
@@ -68,5 +91,4 @@ function renderizarGraficos() {
     });
 }
 
-// Inicializa os gráficos assim que a página carregar
 document.addEventListener("DOMContentLoaded", renderizarGraficos);

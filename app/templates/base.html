@@ -7,9 +7,11 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
     <script>
+        // Bloqueador de "Flicker" de tema: aplica o tema antes do render
         (function () {
             const theme = localStorage.getItem("theme") || "light";
             document.documentElement.setAttribute("data-bs-theme", theme);
@@ -18,21 +20,37 @@
     
     <style>
         :root { --brand-color: #5c2c3b; }
-        .navbar { background-color: var(--brand-color) !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .nav-link { transition: all 0.2s; border-bottom: 2px solid transparent; }
-        .nav-link:hover { opacity: 0.9; color: #fff !important; border-bottom: 2px solid rgba(255,255,255,0.5); }
+        
+        /* Navbar Customizada */
+        .navbar { background-color: var(--brand-color) !important; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .nav-link { transition: all 0.2s; border-bottom: 2px solid transparent; margin: 0 3px; }
+        .nav-link:hover { opacity: 0.9; color: #fff !important; background: rgba(255,255,255,0.1); border-radius: 5px; }
+        
         /* Realce para a página atual */
-        .navbar-nav .nav-link.active { border-bottom: 2px solid white; fw-bold; }
-        .alert { border: none; border-left: 5px solid; }
+        .navbar-nav .nav-link.active { border-bottom: 2px solid white; font-weight: bold; background: rgba(255,255,255,0.15); border-radius: 5px; }
+        
+        /* Efeitos de Cards do Dashboard */
+        .card { transition: transform 0.25s ease, box-shadow 0.25s ease; border: none; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.12) !important; }
+
+        /* Estilos de Badges Suaves (Dashboard) */
+        .bg-soft-danger { background-color: rgba(220, 53, 69, 0.1) !important; color: #dc3545 !important; }
+        .bg-soft-success { background-color: rgba(25, 135, 84, 0.1) !important; color: #198754 !important; }
+
+        .alert { border: none; border-left: 5px solid; border-radius: 8px; }
+
+        /* Ajustes finos para Modo Escuro */
+        [data-bs-theme="dark"] .card { background-color: #2b3035; border: 1px solid rgba(255,255,255,0.05); }
+        [data-bs-theme="dark"] .navbar { background-color: #1a0c11 !important; }
     </style>
 </head>
 
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark d-print-none">
+<nav class="navbar navbar-expand-lg navbar-dark d-print-none sticky-top">
     <div class="container-fluid">
         <a class="navbar-brand fw-bold" href="/">
-            <i class="bi bi-egg-fried"></i> Filipéia Trattoria
+            <i class="bi bi-egg-fried text-warning"></i> Filipéia Trattoria
         </a>
         
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -43,45 +61,58 @@
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'main.colaborador_selecao' %}active{% endif %}" href="{{ url_for('main.colaborador_selecao') }}">
-                        <i class="bi bi-cart-fill"></i> Compras Setores
+                        <i class="bi bi-cart-fill me-1"></i> Compras Setores
                     </a>
                 </li>
 
                 {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">📊 Dashboard</a>
+                        <a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">
+                            <i class="fas fa-chart-line me-1"></i> Dashboard
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.dashboard_motoboys' %}active{% endif %}" href="{{ url_for('main.dashboard_motoboys') }}">🏍️ Motoboys</a>
+                        <a class="nav-link {% if request.endpoint == 'main.dashboard_motoboys' %}active{% endif %}" href="{{ url_for('main.dashboard_motoboys') }}">
+                            <i class="fas fa-motorcycle me-1"></i> Motoboys
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.calcular_rotas' %}active{% endif %}" href="{{ url_for('main.calcular_rotas') }}">🧮 Calcular</a>
+                        <a class="nav-link {% if request.endpoint == 'main.calcular_rotas' %}active{% endif %}" href="{{ url_for('main.calcular_rotas') }}">
+                            <i class="fas fa-calculator me-1"></i> Calcular
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.historico' %}active{% endif %}" href="{{ url_for('main.historico') }}">📂 Histórico</a>
+                        <a class="nav-link {% if request.endpoint == 'main.historico' %}active{% endif %}" href="{{ url_for('main.historico') }}">
+                            <i class="fas fa-history me-1"></i> Histórico
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.compras_geral' %}active{% endif %}" href="{{ url_for('main.compras_geral') }}">🛒 Compras Geral</a>
+                        <a class="nav-link {% if request.endpoint == 'main.compras_geral' %}active{% endif %}" href="{{ url_for('main.compras_geral') }}">
+                            <i class="fas fa-shopping-basket me-1"></i> Compras Geral
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.relatorios_exportar') }}">📑 Relatórios</a>
+                        <a class="nav-link" href="{{ url_for('main.relatorios_exportar') }}">
+                            <i class="fas fa-file-export me-1"></i> Relatórios
+                        </a>
                     </li>
                 {% endif %}
             </ul>
 
             <div class="d-flex align-items-center gap-2">
-                <button id="toggleTheme" class="btn btn-outline-light btn-sm" title="Alternar Tema">
+                <button id="toggleTheme" class="btn btn-outline-light btn-sm rounded-circle" style="width: 32px; height: 32px; padding: 0;" title="Alternar Tema">
                     <i class="bi bi-moon-stars"></i>
                 </button>
 
                 {% if current_user.is_authenticated %}
-                    <span class="text-white-50 small me-2 d-none d-lg-inline">Olá, {{ current_user.username }}</span>
-                    <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-sm">
+                    <div class="vr mx-2 text-white opacity-25 d-none d-lg-block"></div>
+                    <span class="text-white-50 small me-2 d-none d-lg-inline">Admin: <b>{{ current_user.username }}</b></span>
+                    <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-sm px-3 shadow-sm">
                         <i class="bi bi-box-arrow-right"></i> Sair
                     </a>
                 {% else %}
-                    <a href="{{ url_for('main.login') }}" class="btn btn-outline-light btn-sm">
-                        <i class="bi bi-person-lock"></i> Login Admin
+                    <a href="{{ url_for('main.login') }}" class="btn btn-outline-light btn-sm px-3">
+                        <i class="bi bi-person-lock"></i> Login
                     </a>
                 {% endif %}
             </div>
@@ -94,7 +125,13 @@
       {% if messages %}
         {% for category, message in messages %}
           <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show shadow-sm" role="alert">
-            {% if category == 'success' %}<i class="bi bi-check-circle-fill me-2"></i>{% elif category == 'danger' %}<i class="bi bi-exclamation-triangle-fill me-2"></i>{% else %}<i class="bi bi-info-circle-fill me-2"></i>{% endif %}
+            {% if category == 'success' %}
+                <i class="bi bi-check-circle-fill me-2"></i>
+            {% elif category == 'danger' %}
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {% else %}
+                <i class="bi bi-info-circle-fill me-2"></i>
+            {% endif %}
             {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
@@ -108,7 +145,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Lógica de Troca de Tema (Refatorada para maior clareza)
+    // Lógica de Troca de Tema
     const themeBtn = document.getElementById("toggleTheme");
     const html = document.documentElement;
 
@@ -118,7 +155,7 @@
             : '<i class="bi bi-moon-stars"></i>';
     };
 
-    // Inicializa ícone
+    // Inicializa ícone baseado no tema salvo
     updateIcon(html.getAttribute("data-bs-theme"));
 
     themeBtn.onclick = () => {

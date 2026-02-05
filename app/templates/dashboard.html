@@ -1,19 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">📊 Dashboard Financeiro</h3>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <h3 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2 text-primary"></i>Dashboard Financeiro</h3>
     
-    <form class="row g-2 d-print-none" method="GET">
+    <form class="row g-2 d-print-none align-items-center" method="GET">
         <div class="col-auto">
-            <input type="date" name="data_inicio" class="form-control form-control-sm" title="Data Inicial" value="{{ request.args.get('data_inicio', '') }}">
+            <input type="date" name="data_inicio" class="form-control form-control-sm shadow-sm" title="Data Inicial" value="{{ request.args.get('data_inicio', '') }}">
         </div>
         <div class="col-auto">
-            <input type="date" name="data_fim" class="form-control form-control-sm" title="Data Final" value="{{ request.args.get('data_fim', '') }}">
+            <input type="date" name="data_fim" class="form-control form-control-sm shadow-sm" title="Data Final" value="{{ request.args.get('data_fim', '') }}">
         </div>
         
         <div class="col-auto">
-            <select name="loja" class="form-select form-select-sm">
+            <select name="loja" class="form-select form-select-sm shadow-sm">
                 <option value="">Todas as Lojas</option>
                 {% for loja in todas_lojas %}
                 <option value="{{ loja }}" {% if request.args.get('loja') == loja %}selected{% endif %}>{{ loja }}</option>
@@ -22,7 +22,7 @@
         </div>
 
         <div class="col-auto">
-            <select name="turno" class="form-select form-select-sm">
+            <select name="turno" class="form-select form-select-sm shadow-sm">
                 <option value="">Todos os Turnos</option>
                 <option value="Almoço" {% if request.args.get('turno') == 'Almoço' %}selected{% endif %}>Almoço</option>
                 <option value="Jantar" {% if request.args.get('turno') == 'Jantar' %}selected{% endif %}>Jantar</option>
@@ -30,37 +30,40 @@
         </div>
 
         <div class="col-auto">
-            <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
-            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary btn-sm">Limpar</a>
+            <button type="submit" class="btn btn-primary btn-sm px-3 shadow-sm">Filtrar</button>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-light btn-sm shadow-sm border">Limpar</a>
         </div>
         <div class="col-auto">
-            <a href="{{ url_for('main.dashboard_motoboys') }}" class="btn btn-info btn-sm text-white">Ver Motoboys</a>
+            <a href="{{ url_for('main.dashboard_motoboys') }}" class="btn btn-dark btn-sm shadow-sm">Relatório Motoboys</a>
         </div>
     </form>
 </div>
 
 <div class="row mb-4 g-3">
     <div class="col-md-3">
-        <div class="card shadow-sm border-0 bg-dark text-white h-100">
+        <div class="card shadow-sm border-0 bg-dark text-white h-100 position-relative overflow-hidden">
             <div class="card-body">
-                <h6 class="text-secondary small fw-bold">FATURAMENTO TOTAL</h6>
+                <h6 class="text-secondary small fw-bold mb-3 uppercase tracking-wider">Faturamento Total</h6>
                 <h3 class="mb-0">R$ {{ "%.2f"|format(fin_geral.faturamento|default(0)) }}</h3>
+                <i class="fas fa-money-bill-wave position-absolute end-0 bottom-0 m-3 text-secondary opacity-25" style="font-size: 2rem;"></i>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card shadow-sm border-0 bg-primary text-white h-100">
+        <div class="card shadow-sm border-0 bg-primary text-white h-100 position-relative overflow-hidden">
             <div class="card-body">
-                <h6 class="text-white-50 small fw-bold">TAXAS (CLIENTES)</h6>
+                <h6 class="text-white-50 small fw-bold mb-3">Taxas (Clientes)</h6>
                 <h3 class="mb-0">R$ {{ "%.2f"|format(fin_geral.taxas_clientes|default(0)) }}</h3>
+                <i class="fas fa-hand-holding-usd position-absolute end-0 bottom-0 m-3 text-white opacity-25" style="font-size: 2rem;"></i>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card shadow-sm border-0 bg-danger text-white h-100">
+        <div class="card shadow-sm border-0 bg-danger text-white h-100 position-relative overflow-hidden">
             <div class="card-body">
-                <h6 class="text-white-50 small fw-bold">PAGO MOTOBOYS</h6>
+                <h6 class="text-white-50 small fw-bold mb-3">Pago Motoboys</h6>
                 <h3 class="mb-0">R$ {{ "%.2f"|format(total_geral|default(0)) }}</h3>
+                <i class="fas fa-motorcycle position-absolute end-0 bottom-0 m-3 text-white opacity-25" style="font-size: 2rem;"></i>
             </div>
         </div>
     </div>
@@ -68,33 +71,51 @@
         {% set faturamento = fin_geral.taxas_clientes | float %}
         {% set pago = total_geral | float %}
         {% set cobertura = (faturamento / pago * 100) if pago > 0 else 0 %}
-        <div class="card shadow-sm border-0 {% if cobertura < 85 %}bg-warning{% else %}bg-success{% endif %} text-white h-100">
+        <div class="card shadow-sm border-0 {% if cobertura < 85 %}bg-warning{% else %}bg-success{% endif %} text-white h-100 position-relative overflow-hidden">
             <div class="card-body">
-                <h6 class="text-white-50 small fw-bold">COBERTURA DE FRETE</h6>
+                <h6 class="text-white-50 small fw-bold mb-3">Cobertura de Frete</h6>
                 <h3 class="mb-0">{{ "%.2f"|format(cobertura) }}%</h3>
-                <small class="text-white-50">Meta: > 85%</small>
+                <small class="{% if cobertura < 85 %}text-dark{% else %}text-white-50{% endif %}">Meta: > 85%</small>
+                <i class="fas fa-shield-alt position-absolute end-0 bottom-0 m-3 text-white opacity-25" style="font-size: 2rem;"></i>
             </div>
         </div>
     </div>
 </div>
 
 <div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body text-center">
-                <h6 class="fw-bold text-muted mb-3 text-start">Custos por Unidade</h6>
-                <div style="height: 300px;">
+    <div class="col-md-7 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-bold text-muted mb-0"><i class="fas fa-building me-2"></i>Gastos por Unidade</h6>
+            </div>
+            <div class="card-body">
+                <div style="height: 320px;">
                     <canvas id="graficoLoja"></canvas>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body text-center">
-                <h6 class="fw-bold text-muted mb-3 text-start">Eficiência: Recebido vs Pago</h6>
-                <div style="height: 300px;">
+
+    <div class="col-md-5 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-bold text-muted mb-0"><i class="fas fa-chart-pie me-2"></i>Saúde da Taxa de Entrega</h6>
+            </div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                <div style="height: 250px; width: 100%;">
                     <canvas id="graficoEficiencia"></canvas>
+                </div>
+                <div class="mt-4 text-center">
+                    {% set gap = (total_geral - fin_geral.taxas_clientes) %}
+                    {% if gap > 0 %}
+                        <div class="badge bg-soft-danger text-danger p-2 px-3 rounded-pill border border-danger">
+                            <i class="fas fa-arrow-down me-1"></i> Déficit: R$ {{ "%.2f"|format(gap) }}
+                        </div>
+                    {% else %}
+                        <div class="badge bg-soft-success text-success p-2 px-3 rounded-pill border border-success">
+                            <i class="fas fa-arrow-up me-1"></i> Superávit: R$ {{ "%.2f"|format(gap|abs) }}
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -102,7 +123,6 @@
 </div>
 
 <script>
-    // Passagem de dados segura do Jinja para o JavaScript
     const dadosLoja = {
         labels: {{ por_loja | map(attribute=0) | list | tojson | safe }},
         values: {{ por_loja | map(attribute=1) | list | tojson | safe }}

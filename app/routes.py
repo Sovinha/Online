@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user, login_user, logout_user
-from sqlalchemy import func
+from sqlalchemy import func, text
 from werkzeug.security import check_password_hash
 import pandas as pd
 import json
@@ -8,6 +8,8 @@ import os
 from io import BytesIO
 from datetime import datetime
 from app.extensions import db
+# Importa a função e os modelos necessários
+from app.models import User, Historico, HistoricoMotoboy, ItemCompra, get_br_time
 
 bp = Blueprint("main", __name__)
 
@@ -28,7 +30,6 @@ def load_config():
 
 @bp.route("/login", methods=["GET", "POST"])
 def login():
-    from app.models import User
     if request.method == "POST":
         u, p = request.form.get("username"), request.form.get("password")
         user = User.query.filter_by(username=u).first()
@@ -56,9 +57,7 @@ def home():
 @bp.route("/dashboard")
 @login_required
 def dashboard():
-    from app.models import Historico
     loja_sel = request.args.get("loja")
-    
     q = Historico.query
     if loja_sel: q = q.filter(Historico.loja == loja_sel)
 
@@ -87,9 +86,7 @@ def dashboard():
 @bp.route("/dashboard/motoboys")
 @login_required
 def dashboard_motoboys():
-    from app.models import HistoricoMotoboy
     cfg = load_config()
-    
     loja = request.args.get("loja")
     data_inicio = request.args.get("data_inicio")
     data_fim = request.args.get("data_fim")
@@ -106,7 +103,6 @@ def dashboard_motoboys():
     if data_fim: q = q.filter(func.date(HistoricoMotoboy.data) <= data_fim)
 
     dados = q.group_by(HistoricoMotoboy.motoboy).order_by(func.sum(HistoricoMotoboy.entregas).desc()).all()
-    
     total_pago = sum(d[3] for d in dados) if dados else 0
     total_pedidos = sum(d[1] for d in dados) if dados else 0
 
@@ -152,7 +148,6 @@ def calcular_preview():
 @bp.route("/calcular-confirmar", methods=["POST"])
 @login_required
 def calcular_confirmar():
-    from app.models import Historico, HistoricoMotoboy
     data = request.json
     resumo = data.get("resumo", [])
     fin = data.get("financeiro", {})
@@ -188,7 +183,6 @@ def calcular_confirmar():
 @bp.route("/historico")
 @login_required
 def historico():
-    from app.models import Historico
     cfg = load_config()
     loja = request.args.get("loja")
     turno = request.args.get("turno")
@@ -206,7 +200,6 @@ def historico():
 @bp.route("/historico/detalhes/<int:id>")
 @login_required
 def historico_detalhes(id):
-    from app.models import Historico, HistoricoMotoboy
     h = Historico.query.get_or_404(id)
     detalhes = HistoricoMotoboy.query.filter_by(historico_id=id).all()
     cobertura = (h.taxas_clientes / h.total * 100) if h.total > 0 else 0
@@ -219,10 +212,23 @@ def historico_detalhes(id):
                    "valor_final": d.valor_final, "motivo": d.motivo_ajuste, "pedidos": d.pedidos} for d in detalhes]
     })
 
+# --- NOVA ROTA DE SALVAMENTO DE ERROS ---
+@bp.route('/historico/salvar-erro/<int:id>', methods=['POST'])
+@login_required
+def salvar_erro_historico(id):
+    try:
+        dados = request.get_json()
+        h = Historico.query.get_or_404(id)
+        h.erros = dados.get('erro')
+        db.session.commit()
+        return jsonify({"ok": True}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 @bp.route("/historico/editar", methods=["POST"])
 @login_required
 def historico_editar():
-    from app.models import HistoricoMotoboy, Historico
     dados = request.json.get("dados", [])
     h_id = None
     for item in dados:
@@ -240,20 +246,17 @@ def historico_editar():
 @bp.route("/historico/excluir/<int:id>", methods=["POST"])
 @login_required
 def historico_excluir(id):
-    from app.models import Historico
     db.session.delete(Historico.query.get_or_404(id))
     db.session.commit()
     return jsonify({"ok": True})
 
 # ======================================================
-# EXPORTAÇÃO DE RELATÓRIOS
+# EXPORTAÇÃO
 # ======================================================
 
 @bp.route("/relatorios/exportar")
 @login_required
 def relatorios_exportar():
-    from app.models import HistoricoMotoboy
-    
     dados = HistoricoMotoboy.query.all()
     lista = []
     for d in dados:
@@ -269,7 +272,6 @@ def relatorios_exportar():
 
     df = pd.DataFrame(lista)
     output = BytesIO()
-    # Engine 'openpyxl' é geralmente mais estável para leitura posterior
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Relatorio')
     output.seek(0)
@@ -289,50 +291,56 @@ def colaborador_selecao():
 
 @bp.route('/colaborador/lista/<setor>')
 def colaborador_lista(setor):
-    from app.models import ItemCompra
-    itens = ItemCompra.query.filter_by(setor=setor.upper()).order_by(ItemCompra.nome).all()
+    itens = ItemCompra.query.filter_by(setor=setor.upper()).order_by(ItemCompra.categoria, ItemCompra.nome).all()
     return render_template('colaborador.html', itens=itens, setor=setor.upper())
 
-@bp.route('/colaborador/add/<setor>', methods=['POST'])
+@bp.route('/add_item/<setor>', methods=['POST'])
 def add_item_compra(setor):
-    from app.models import ItemCompra
     nome = request.form.get('nome')
-    if nome:
-        db.session.add(ItemCompra(nome=nome.strip().upper(), quantidade=0, setor=setor.upper()))
-        db.session.commit()
+    cat_digitada = request.form.get('nova_categoria')
+    cat_selecionada = request.form.get('categoria')
+    categoria_final = (cat_digitada if cat_digitada else cat_selecionada) or 'OUTROS'
+    
+    if not nome:
+        return redirect(url_for('main.colaborador_lista', setor=setor))
+
+    novo_item = ItemCompra(
+        nome=nome.upper().strip(), 
+        setor=setor.upper(), 
+        categoria=categoria_final.upper().strip(),
+        quantidade=0
+    )
+    db.session.add(novo_item)
+    db.session.commit()
     return redirect(url_for('main.colaborador_lista', setor=setor))
 
-@bp.route('/colaborador/update/<int:id>/<string:acao>', methods=['POST'])
-def update_item(id, acao):
-    from app.models import ItemCompra
-    item = ItemCompra.query.get(id)
-    if acao == 'add': item.quantidade += 1
-    elif acao == 'sub' and item.quantidade > 0: item.quantidade -= 1
+@bp.route('/update_item_v2/<int:id>', methods=['POST'])
+def update_item_v2(id):
+    item = ItemCompra.query.get_or_404(id)
+    item.quantidade = int(request.form.get('quantidade', 0))
+    item.quem_pediu = request.form.get('colaborador_nome', 'ANÔNIMO').upper()
+    item.data = get_br_time() 
+    
     db.session.commit()
-    return redirect(url_for('main.colaborador_lista', setor=item.setor))
+    return redirect(request.referrer)
 
 @bp.route('/colaborador/delete/<int:id>', methods=['POST'])
-@login_required
 def delete_item(id):
-    from app.models import ItemCompra
     item = ItemCompra.query.get_or_404(id)
     setor = item.setor
     db.session.delete(item)
     db.session.commit()
-    flash(f"Item '{item.nome}' removido com sucesso.", "success")
     return redirect(url_for('main.colaborador_lista', setor=setor))
 
 @bp.route("/admin/compras-geral")
 @login_required
 def compras_geral():
-    from app.models import ItemCompra
     itens = ItemCompra.query.filter(ItemCompra.quantidade > 0).order_by(ItemCompra.setor).all()
     return render_template("admin_compras.html", itens=itens)
 
 @bp.route('/admin/limpar-lista/<setor>', methods=['POST'])
 @login_required
 def limpar_lista(setor):
-    from app.models import ItemCompra
     q = ItemCompra.query
     if setor != 'TODOS': q = q.filter_by(setor=setor.upper())
     q.update({ItemCompra.quantidade: 0})

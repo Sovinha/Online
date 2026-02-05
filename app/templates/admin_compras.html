@@ -1,64 +1,144 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+    /* Estilo Saturnino Profissional */
+    .admin-header { border-left: 5px solid #800000; padding-left: 15px; }
+    .table-admin thead { background-color: #800000; color: white; }
+    .badge-qty { font-size: 1rem; background-color: #800000 !important; min-width: 38px; border-radius: 6px; }
+    .sector-row { background-color: #f8f9fa; font-weight: bold; color: #800000; border-top: 2px solid #dee2e6; }
+    
+    /* Checklist Interativo */
+    .item-row { cursor: pointer; transition: all 0.2s; border-bottom: 1px solid #eee; }
+    .item-row:hover { background-color: rgba(128, 0, 0, 0.03) !important; }
+    
+    .comprado { 
+        background-color: #f8f9fa !important; 
+        color: #adb5bd !important;
+        text-decoration: line-through;
+    }
+    .comprado .badge-qty, .comprado .badge-date { 
+        background-color: #ced4da !important; 
+        border-color: #ced4da !important; 
+        color: white !important; 
+    }
+
+    /* Badge de Data e Hora */
+    .badge-date { 
+        font-size: 0.75rem; 
+        font-weight: 600; 
+        padding: 5px 10px;
+        border-radius: 20px;
+        background-color: rgba(128, 0, 0, 0.05);
+        color: #800000;
+        border: 1px solid rgba(128, 0, 0, 0.1);
+    }
+
+    @media print {
+        .navbar, .btn, .d-print-none, .check-info { display: none !important; }
+        .container { max-width: 100% !important; width: 100% !important; margin: 0 !important; }
+        .comprado { text-decoration: none !important; color: black !important; background: none !important; }
+        .badge-date { border: none !important; color: #555 !important; background: none !important; }
+    }
+</style>
+
 <div class="container pb-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="fw-bold mb-0 text-primary">🛒 Lista Consolidada</h2>
-            <p class="text-muted">Todos os itens com falta sinalizada pelos colaboradores</p>
+    <div class="d-flex justify-content-between align-items-center mb-4 pt-4 d-print-none">
+        <div class="admin-header">
+            <h2 class="fw-bold mb-0">Lista de Compras Consolidada</h2>
+            <p class="text-muted mb-0">Toque no item para marcar como comprado</p>
         </div>
         <div class="d-flex gap-2">
-            <button onclick="window.print()" class="btn btn-outline-dark d-print-none">
-                <i class="bi bi-printer"></i> Imprimir
+            <button onclick="window.print()" class="btn btn-outline-dark shadow-sm">
+                <i class="bi bi-printer"></i>
             </button>
-            <form action="{{ url_for('main.limpar_lista', setor='TODOS') }}" method="POST" onsubmit="return confirm('Deseja zerar TODAS as quantidades da lista?')">
-                <button type="submit" class="btn btn-danger d-print-none">
-                    <i class="bi bi-trash"></i> Resetar Geral
+            <form action="{{ url_for('main.limpar_lista', setor='TODOS') }}" method="POST" onsubmit="return confirm('Deseja zerar toda a lista?')">
+                <button type="submit" class="btn btn-danger shadow-sm">
+                    <i class="bi bi-trash-fill me-1"></i> Resetar
                 </button>
             </form>
         </div>
     </div>
 
     {% if itens %}
-    <div class="row">
-        {% set current_sector = [] %}
-        {% for item in itens %}
-            {% if item.setor not in current_sector %}
-                <div class="col-12 mt-4 mb-2">
-                    <h5 class="fw-bold text-uppercase border-bottom pb-2">
-                        <i class="bi bi-tag-fill me-2"></i>{{ item.setor }}
-                    </h5>
-                </div>
-                {% set _ = current_sector.append(item.setor) %}
-            {% endif %}
-            
-            <div class="col-md-4 mb-3">
-                <div class="card shadow-sm border-start border-primary border-4">
-                    <div class="card-body d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="d-block fw-bold fs-5">{{ item.nome }}</span>
-                            <small class="text-muted">Setor: {{ item.setor }}</small>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge bg-primary fs-5">{{ item.quantidade }}</span>
-                        </div>
-                    </div>
-                </div>
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 table-admin">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width: 50px;">#</th>
+                            <th>Item / Categoria</th>
+                            <th class="text-center">Qtd</th>
+                            <th>Enviado por</th>
+                            <th>Hora da Solicitação</th>
+                            <th class="text-end pe-4 d-print-none">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set current_sector = namespace(name="") %}
+                        {% for item in itens %}
+                            {% if item.setor != current_sector.name %}
+                                {% set current_sector.name = item.setor %}
+                                <tr class="sector-row">
+                                    <td colspan="6" class="ps-4 py-2 text-uppercase small letter-spacing-1">
+                                        <i class="bi bi-geo-alt-fill me-1"></i>Setor: {{ current_sector.name }}
+                                    </td>
+                                </tr>
+                            {% endif %}
+
+                            <tr class="item-row" onclick="toggleItem(this)">
+                                <td class="ps-4">
+                                    <input class="form-check-input check-comprado shadow-none" type="checkbox" style="pointer-events: none;">
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark text-uppercase" style="font-size: 0.95rem;">{{ item.nome }}</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">{{ item.categoria }}</div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-qty shadow-sm">{{ item.quantidade }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-person text-secondary"></i>
+                                        <span style="font-size: 0.9rem;">{{ item.quem_pediu or 'S/ Identificação' }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-date">
+                                        <i class="bi bi-clock-history me-1"></i>
+                                        {% if item.data %}
+                                            {{ item.data.strftime('%d/%m - %H:%M') }}
+                                        {% else %}
+                                            <span class="opacity-50">Sinalizado agora</span>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td class="text-end pe-4 d-print-none">
+                                    <form action="{{ url_for('main.delete_item', id=item.id) }}" method="POST" class="d-inline" onclick="event.stopPropagation()">
+                                        <button type="submit" class="btn btn-sm text-danger opacity-75 hover-opacity-100">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-        {% endfor %}
-    </div>
+        </div>
     {% else %}
-    <div class="text-center py-5">
-        <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
-        <h3 class="mt-3">Tudo em dia!</h3>
-        <p class="text-muted">Nenhum colaborador sinalizou falta de itens no momento.</p>
-    </div>
+        <div class="text-center py-5 bg-white rounded-4 shadow-sm border">
+            <i class="bi bi-cart-check text-success display-1"></i>
+            <h4 class="mt-3 fw-bold text-dark">Tudo em ordem!</h4>
+            <p class="text-muted">Nenhum item em falta no momento.</p>
+        </div>
     {% endif %}
 </div>
 
-<style>
-@media print {
-    .navbar, .btn, .d-print-none { display: none !important; }
-    .card { border: 1px solid #ddd !important; break-inside: avoid; }
-}
-</style>
+<script>
+    function toggleItem(row) {
+        row.classList.toggle('comprado');
+        const checkbox = row.querySelector('.check-comprado');
+        checkbox.checked = !checkbox.checked;
+    }
+</script>
 {% endblock %}

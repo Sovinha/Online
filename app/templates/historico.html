@@ -7,7 +7,6 @@
         overflow-x: auto;
     }
     
-    /* Estilo para a caixa de IDs que aparece ao clicar na lupa */
     .col-pedidos {
         word-wrap: break-word;
         white-space: normal !important;
@@ -16,12 +15,31 @@
         color: #495057;
     }
 
-    .col-valor-final {
-        width: 140px;
+    .col-valor-final { width: 140px; }
+    .col-motoboy { min-width: 140px; }
+
+    /* Estilo padrão Filipéia para os novos botões */
+    .btn-filipeia-nota {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #5c2d35;
+        font-weight: 600;
+        transition: 0.2s;
+    }
+    .btn-filipeia-nota:hover {
+        background-color: #5c2d35;
+        color: white;
     }
 
-    .col-motoboy {
-        min-width: 140px;
+    /* Modal com as cores do seu site */
+    .modal-filipeia .modal-header {
+        background-color: #5c2d35 !important;
+        color: white !important;
+    }
+    .btn-salvar-filipeia {
+        background-color: #5c2d35 !important;
+        border: none !important;
+        color: white !important;
     }
 </style>
 
@@ -70,7 +88,7 @@
                 <th>Loja</th>
                 <th>Turno</th>
                 <th>Total Bruto</th>
-                <th>Ações</th>
+                <th>Ocorrências</th> <th>Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -88,6 +106,18 @@
                     {% endif %}
                 </td>
                 <td class="align-middle fw-bold text-success">R$ {{ "%.2f"|format(h.total) }}</td>
+                
+                <td class="align-middle">
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-filipeia-nota" onclick="abrirModalErro({{ h.id }}, '{{ h.erros or '' }}')">
+                            <i class="bi bi-pencil-square"></i> Notas
+                        </button>
+                        <button class="btn btn-sm btn-light border" onclick="visualizarErro('{{ h.erros or '' }}')">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </td>
+
                 <td class="text-center">
                     <div class="btn-group shadow-sm">
                         <button class="btn btn-outline-secondary btn-sm"
@@ -103,7 +133,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="5" class="text-center text-muted py-4">Nenhum cálculo encontrado para os filtros selecionados.</td>
+                <td colspan="6" class="text-center text-muted py-4">Nenhum cálculo encontrado.</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -114,10 +144,9 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title" id="modalTitulo text-center">📊 Detalhamento do Fechamento</h5>
+                <h5 class="modal-title">📊 Detalhamento do Fechamento</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-
             <div class="modal-body">
                 <div class="table-responsive">
                     <table class="table table-sm table-striped align-middle">
@@ -130,22 +159,38 @@
                                 <th>Motivo do Ajuste</th>
                             </tr>
                         </thead>
-                        <tbody id="modalBody">
-                            </tbody>
+                        <tbody id="modalBody"></tbody>
                     </table>
                 </div>
             </div>
-
             <div class="modal-footer bg-light">
                 <button id="btnWhatsapp" class="btn btn-success" onclick="enviarWhatsapp()">
                     <i class="bi bi-whatsapp"></i> Enviar via WhatsApp
                 </button>
-
                 <button id="btnSalvar" class="btn btn-primary" onclick="salvarEdicao()">
                     <i class="bi bi-save"></i> Salvar Alterações
                 </button>
-
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade modal-filipeia" id="modalErro" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Ocorrências do Turno</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="erro_registro_id">
+                <label class="fw-bold mb-2 small text-muted">DESCRIÇÃO DOS ERROS/OBSERVAÇÕES:</label>
+                <textarea id="erro_texto" class="form-control" rows="5" placeholder="Ex: Motoboy X chegou atrasado, Erro no pedido Y..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-salvar-filipeia px-4" onclick="salvarErro()">Salvar Ocorrência</button>
             </div>
         </div>
     </div>
