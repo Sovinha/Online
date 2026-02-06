@@ -27,9 +27,13 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chave-de-seguranca-padrao')
 
+    # CONFIGURAÇÕES OTIMIZADAS PARA VELOCIDADE (POOL DE CONEXÕES)
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        "pool_pre_ping": True,
-        "pool_recycle": 300,
+        "pool_size": 10,                # Mantém 10 conexões sempre abertas
+        "max_overflow": 20,             # Abre até +20 em picos de acesso
+        "pool_timeout": 30,             # Tempo de espera por conexão
+        "pool_recycle": 1800,           # Recicla conexões a cada 30 min (evita idle timeout)
+        "pool_pre_ping": True,          # Verifica se a conexão caiu antes de usá-la
         "connect_args": connect_args
     }
 
@@ -46,7 +50,6 @@ def create_app():
             from app.models import User
             from werkzeug.security import generate_password_hash
             
-            # LISTA DE USUÁRIOS PARA RESETAR
             usuarios_reset = [
                 {'u': 'admin', 'p': 'admin123'},
                 {'u': 'galca', 'p': 'galca'}
@@ -55,13 +58,11 @@ def create_app():
             for user_data in usuarios_reset:
                 user_obj = User.query.filter_by(username=user_data['u']).first()
                 
-                # Se o usuário existe mas a senha NÃO é uma hash (não começa com scrypt ou pbkdf2)
                 if user_obj and not user_obj.password.startswith(('scrypt', 'pbkdf2')):
                     db.session.delete(user_obj)
                     db.session.commit()
                     user_obj = None
                 
-                # Cria o usuário com a senha criptografada corretamente
                 if not user_obj:
                     novo_user = User(
                         username=user_data['u'],
@@ -71,7 +72,7 @@ def create_app():
                     db.session.commit()
                     print(f">>> Usuário '{user_data['u']}' resetado com senha criptografada.")
                 
-            print("Conexão estável com Supabase estabelecida.")
+            print("Conexão estável e otimizada com Supabase estabelecida.")
         except Exception as e:
             print(f"Erro ao configurar usuários: {e}")
 
