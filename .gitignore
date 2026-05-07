@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+instance/
+.env
+.venv/
+venv/
+server.log
+server.err.log
+app.db
+banco.db
+cache_distancias.json
+historico.csv
+exports/

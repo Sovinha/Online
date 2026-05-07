@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="app-card app-card-form mb-4">
+    <div class="section-heading">
+        <div>
+            <span class="section-kicker">Conferencia</span>
+            <h1 class="section-title">Comparar pedidos</h1>
+        </div>
+    </div>
+
+    <div id="compareFeedback" class="alert alert-danger d-none mb-4"></div>
+
+    <form id="formConferenciaPedidos" enctype="multipart/form-data">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label app-label">Planilha do Cardapio Web</label>
+                <input type="file" name="planilha_cardapio" class="form-control app-input" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label app-label">Planilha do Food</label>
+                <input type="file" name="planilha_food" class="form-control app-input" required>
+            </div>
+        </div>
+
+        <div class="app-actions mt-4">
+            <button type="submit" class="btn btn-brand" id="btnCompararPedidos">
+                <i class="bi bi-search"></i>
+                <span>Comparar</span>
+            </button>
+        </div>
+    </form>
+</section>
+
+<section id="compareResult" class="d-none">
+    <div class="surface-card">
+        <div class="section-heading mb-3">
+            <div>
+                <span class="section-kicker">Resultado</span>
+                <h2 class="section-title section-title-sm">Pedidos divergentes</h2>
+            </div>
+            <div id="compareCount" class="section-chip"></div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table preview-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Pedido</th>
+                        <th>Resultado</th>
+                    </tr>
+                </thead>
+                <tbody id="compareTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<script src="{{ url_for('static', filename='compare_reports.js') }}"></script>
+
+{% endblock %}

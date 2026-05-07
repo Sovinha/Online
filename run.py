@@ -14,15 +14,16 @@ with app.app_context():
     # Apenas garante que o admin exista
     try:
         from werkzeug.security import generate_password_hash
+
         admin = User.query.filter_by(username="admin").first()
         if not admin:
             db.session.add(User(username="admin", password=generate_password_hash("admin123")))
             db.session.commit()
-            print("👤 Usuário admin verificado/criado.")
+            print("Usuario admin verificado/criado.")
     except Exception as e:
-        print(f"Nota: Admin já existente ou erro leve: {e}")
+        print(f"Nota: Admin ja existente ou erro leve: {e}")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    print(f"🚀 Saturnino Online pronto: http://127.0.0.1:{port}")
+    print(f"Saturnino Online pronto: http://127.0.0.1:{port}")
     app.run(host="0.0.0.0", port=port, debug=True)

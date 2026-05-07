@@ -1,116 +1,203 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">🧮 Calcular Pagamentos</h3>
-    <span class="badge bg-secondary">Versão 2.0</span>
-</div>
-
-<form id="formCalculo" enctype="multipart/form-data" class="card card-body shadow-sm mb-4 border-0">
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label class="form-label fw-bold small">Unidade / Loja</label>
-            <select name="loja" class="form-select" required>
-                <option value="" disabled selected>Selecione a loja...</option>
-                {% for key, loja in lojas.items() %}
-                    <option value="{{ key }}">{{ loja.nome }}</option>
-                {% endfor %}
-            </select>
+<section class="hero-panel mb-4">
+    <div>
+        <span class="eyebrow">Calculadora operacional</span>
+        <h1 class="hero-title">Calculo de pagamentos por entrega</h1>
+        <p class="hero-copy">
+            Envie a planilha, revise os parametros e confira o resumo antes de salvar no historico.
+        </p>
+    </div>
+    <div class="hero-meta">
+        <div class="hero-meta-card">
+            <span class="hero-meta-label">Fluxo</span>
+            <strong>Planilha > Preview > Ajuste > Salvar</strong>
         </div>
-
-        <div class="col-md-6 mb-3">
-            <label class="form-label fw-bold small">Planilha de Entregas (.xlsx ou .csv)</label>
-            <input type="file" name="planilha" class="form-control" required>
+        <div class="hero-meta-card">
+            <span class="hero-meta-label">Modo</span>
+            <strong>Leitura clara para conferencia rapida</strong>
         </div>
     </div>
+</section>
 
-    <div class="row g-2 mb-3">
-        <div class="col-md-4">
-            <label class="small fw-bold text-muted">Diária Base (R$)</label>
-            <input type="number" step="0.01" name="base" class="form-control" value="{{ base }}">
-        </div>
-        <div class="col-md-4">
-            <label class="small fw-bold text-muted">Valor por KM (R$)</label>
-            <input type="number" step="0.01" name="km" class="form-control" value="{{ km }}">
-        </div>
-        <div class="col-md-4">
-            <label class="small fw-bold text-muted">Mínimo por Entrega (R$)</label>
-            <input type="number" step="0.01" name="minimo" class="form-control" value="{{ minimo }}">
-        </div>
+<section class="row g-4 align-items-stretch">
+    <div class="col-xl-8">
+        <form id="formCalculo" enctype="multipart/form-data" class="app-card app-card-form">
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">Entrada</span>
+                    <h2 class="section-title">Dados para processar</h2>
+                </div>
+                <span class="section-chip">Leitura automatica da planilha</span>
+            </div>
+
+            <div id="formFeedback" class="alert alert-danger d-none mb-4" role="alert"></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label app-label">Unidade</label>
+                    <select name="loja" class="form-select app-input" required>
+                        <option value="" disabled selected>Selecione a loja</option>
+                        {% for key, loja in lojas.items() %}
+                            <option value="{{ key }}">{{ loja.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label app-label">Planilha de entregas</label>
+                    <input type="file" name="planilha" class="form-control app-input" required>
+                    <div class="form-text">Aceita arquivos .xlsx e .csv.</div>
+                </div>
+            </div>
+
+            <div class="app-divider"></div>
+
+            <div class="section-heading mb-3">
+                <div>
+                    <span class="section-kicker">Parametros</span>
+                    <h3 class="section-title section-title-sm">Base do calculo</h3>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label app-label">Base por entrega</label>
+                    <div class="input-group app-money-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="number" step="0.01" name="base" class="form-control app-input" value="{{ base }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label app-label">Valor por km</label>
+                    <div class="input-group app-money-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="number" step="0.01" name="km" class="form-control app-input" value="{{ km }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label app-label">Minimo por entrega</label>
+                    <div class="input-group app-money-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="number" step="0.01" name="minimo" class="form-control app-input" value="{{ minimo }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="app-actions mt-4">
+                <button type="submit" class="btn btn-brand btn-lg" id="btnCalcular">
+                    <i class="bi bi-play-circle"></i>
+                    <span>Gerar preview de pagamento</span>
+                </button>
+            </div>
+        </form>
     </div>
 
-    <div class="d-grid">
-        <button type="submit" class="btn btn-primary py-2 fw-bold" id="btnCalcular">
-            <i class="bi bi-play-fill"></i> Processar e Visualizar Preview
-        </button>
+    <div class="col-xl-4">
+        <aside class="app-card app-help-card">
+            <span class="section-kicker">Como conferir</span>
+            <h2 class="section-title">Leitura rapida do resultado</h2>
+
+            <div class="check-list">
+                <div class="check-item">
+                    <i class="bi bi-1-circle"></i>
+                    <span>Escolha a loja correta antes do upload.</span>
+                </div>
+                <div class="check-item">
+                    <i class="bi bi-2-circle"></i>
+                    <span>Revise base, km e minimo antes do preview.</span>
+                </div>
+                <div class="check-item">
+                    <i class="bi bi-3-circle"></i>
+                    <span>Compare faturamento, taxas e total a pagar.</span>
+                </div>
+                <div class="check-item">
+                    <i class="bi bi-4-circle"></i>
+                    <span>Se precisar, ajuste por motoboy antes de salvar.</span>
+                </div>
+            </div>
+
+            <div class="mini-kpi-stack">
+                <div class="mini-kpi">
+                    <span>Base atual</span>
+                    <strong>R$ {{ "%.2f"|format(base) }}</strong>
+                </div>
+                <div class="mini-kpi">
+                    <span>Km atual</span>
+                    <strong>R$ {{ "%.2f"|format(km) }}</strong>
+                </div>
+                <div class="mini-kpi">
+                    <span>Minimo atual</span>
+                    <strong>R$ {{ "%.2f"|format(minimo) }}</strong>
+                </div>
+            </div>
+        </aside>
     </div>
-</form>
+</section>
 
 <div class="modal fade" id="modalAjustes" tabindex="-1" data-bs-backdrop="static">
-  <div class="modal-dialog modal-xl modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-dark text-white">
-        <h5 class="modal-title"><i class="bi bi-sliders me-2"></i> Ajustes e Revisão Final</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
+    <div class="modal-dialog modal-fullscreen-lg-down modal-xl modal-dialog-centered">
+        <div class="modal-content app-modal">
+            <div class="modal-header app-modal-header">
+                <div>
+                    <span class="section-kicker text-white-50">Preview de conferencia</span>
+                    <h5 class="modal-title mb-0">Resumo antes de salvar</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
 
-      <div class="modal-body bg-light">
-        <div id="loadingConfirmar" class="text-center d-none my-4">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-2">Salvando no banco de dados e gerando arquivos...</p>
-        </div>
+            <div class="modal-body app-modal-body">
+                <div id="previewStats" class="preview-grid mb-4"></div>
 
-        <div class="table-responsive bg-white rounded shadow-sm">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Motoboy</th>
-                        <th class="text-center">Entregas</th>
-                        <th class="text-center">Calculado (R$)</th>
-                        <th style="width: 150px;">Ajuste (R$)</th>
-                        <th>Motivo do Ajuste</th>
-                        <th class="text-end">Final (R$)</th>
-                    </tr>
-                </thead>
-                <tbody id="listaAjustes">
-                    </tbody>
-            </table>
-        </div>
-      </div>
+                <div class="preview-summary-box mb-4">
+                    <div>
+                        <span class="summary-label">Loja em revisao</span>
+                        <strong id="previewLojaNome">-</strong>
+                    </div>
+                    <div>
+                        <span class="summary-label">Motoboys no fechamento</span>
+                        <strong id="previewMotoboys">0</strong>
+                    </div>
+                    <div>
+                        <span class="summary-label">Entregas processadas</span>
+                        <strong id="previewEntregas">0</strong>
+                    </div>
+                    <div>
+                        <span class="summary-label">Total final</span>
+                        <strong id="previewTotalFinal">R$ 0,00</strong>
+                    </div>
+                </div>
 
-      <div class="modal-footer bg-white border-top-0">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button id="confirmarAjustes" class="btn btn-success px-4 fw-bold">
-            <i class="bi bi-check-all"></i> Confirmar e Salvar Histórico
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+                <div class="table-responsive preview-table-wrap">
+                    <table class="table preview-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Motoboy</th>
+                                <th>Leitura do turno</th>
+                                <th class="text-center">Entregas</th>
+                                <th class="text-end">Calculado</th>
+                                <th style="width: 160px;">Ajuste</th>
+                                <th>Motivo</th>
+                                <th class="text-end">Final</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaAjustes"></tbody>
+                    </table>
+                </div>
+            </div>
 
-<div id="secaoResultado" class="card shadow-sm border-0 d-none">
-    <div class="card-body text-center py-5">
-        <div class="mb-4">
-            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
-        </div>
-        <h4 class="fw-bold">Processamento Concluído!</h4>
-        <p class="text-muted">Os dados foram salvos e os relatórios estão prontos para download.</p>
-        
-        <div class="d-flex justify-content-center gap-2 mt-4">
-            <a id="btnTxt" class="btn btn-dark px-4">
-                <i class="bi bi-file-earmark-text"></i> Download TXT (Banco)
-            </a>
-            <a id="btnPdf" class="btn btn-danger px-4">
-                <i class="bi bi-file-earmark-pdf"></i> Download PDF (Relatório)
-            </a>
-            <a href="{{ url_for('main.historico') }}" class="btn btn-outline-primary px-4">
-                <i class="bi bi-clock-history"></i> Ir para Histórico
-            </a>
+            <div class="modal-footer app-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
+                <button id="confirmarAjustes" class="btn btn-brand">
+                    <i class="bi bi-check2-circle"></i>
+                    <span>Confirmar e salvar</span>
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/static/calcular.js"></script>
 
 {% endblock %}

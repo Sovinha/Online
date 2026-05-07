@@ -1,126 +1,175 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-    <h3 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2 text-primary"></i>Dashboard Financeiro</h3>
-    
-    <form class="row g-2 d-print-none align-items-center" method="GET">
-        <div class="col-auto">
-            <input type="date" name="data_inicio" class="form-control form-control-sm shadow-sm" title="Data Inicial" value="{{ request.args.get('data_inicio', '') }}">
+<section class="hero-panel mb-4">
+    <div>
+        <span class="eyebrow">Painel financeiro</span>
+        <h1 class="hero-title">Visao geral do fechamento</h1>
+        <p class="hero-copy">
+            Compare faturamento, taxa recebida dos clientes e total pago aos motoboys em uma leitura unica.
+        </p>
+    </div>
+
+    <div class="hero-meta">
+        <div class="hero-meta-card">
+            <span class="hero-meta-label">Analise</span>
+            <strong>Foco em cobertura de frete e gasto por unidade</strong>
         </div>
-        <div class="col-auto">
-            <input type="date" name="data_fim" class="form-control form-control-sm shadow-sm" title="Data Final" value="{{ request.args.get('data_fim', '') }}">
+        <div class="hero-meta-card">
+            <span class="hero-meta-label">Acesso rapido</span>
+            <strong>Use os filtros para comparar periodos e lojas</strong>
         </div>
-        
-        <div class="col-auto">
-            <select name="loja" class="form-select form-select-sm shadow-sm">
-                <option value="">Todas as Lojas</option>
-                {% for loja in todas_lojas %}
+    </div>
+</section>
+
+<section class="app-card mb-4">
+    <div class="section-heading mb-3">
+        <div>
+            <span class="section-kicker">Filtros</span>
+            <h2 class="section-title section-title-sm">Recorte do painel</h2>
+        </div>
+    </div>
+
+    <form class="filter-bar" method="GET">
+        <input type="date" name="data_inicio" class="form-control" value="{{ request.args.get('data_inicio', '') }}">
+        <input type="date" name="data_fim" class="form-control" value="{{ request.args.get('data_fim', '') }}">
+
+        <select name="loja" class="form-select">
+            <option value="">Todas as lojas</option>
+            {% for loja in todas_lojas %}
                 <option value="{{ loja }}" {% if request.args.get('loja') == loja %}selected{% endif %}>{{ loja }}</option>
-                {% endfor %}
-            </select>
-        </div>
+            {% endfor %}
+        </select>
 
-        <div class="col-auto">
-            <select name="turno" class="form-select form-select-sm shadow-sm">
-                <option value="">Todos os Turnos</option>
-                <option value="Almoço" {% if request.args.get('turno') == 'Almoço' %}selected{% endif %}>Almoço</option>
-                <option value="Jantar" {% if request.args.get('turno') == 'Jantar' %}selected{% endif %}>Jantar</option>
-            </select>
-        </div>
+        <select name="turno" class="form-select">
+            <option value="">Todos os turnos</option>
+            <option value="Almoço" {% if request.args.get('turno') == 'Almoço' %}selected{% endif %}>Almoco</option>
+            <option value="Jantar" {% if request.args.get('turno') == 'Jantar' %}selected{% endif %}>Jantar</option>
+        </select>
 
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary btn-sm px-3 shadow-sm">Filtrar</button>
-            <a href="{{ url_for('main.dashboard') }}" class="btn btn-light btn-sm shadow-sm border">Limpar</a>
-        </div>
-        <div class="col-auto">
-            <a href="{{ url_for('main.dashboard_motoboys') }}" class="btn btn-dark btn-sm shadow-sm">Relatório Motoboys</a>
-        </div>
+        <button type="submit" class="btn btn-brand">
+            <i class="bi bi-funnel"></i>
+            <span>Aplicar filtros</span>
+        </button>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">Limpar</a>
+        <a href="{{ url_for('main.dashboard_motoboys') }}" class="btn btn-outline-dark">Ver motoboys</a>
     </form>
-</div>
+</section>
 
-<div class="row mb-4 g-3">
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 bg-dark text-white h-100 position-relative overflow-hidden">
-            <div class="card-body">
-                <h6 class="text-secondary small fw-bold mb-3 uppercase tracking-wider">Faturamento Total</h6>
-                <h3 class="mb-0">R$ {{ "%.2f"|format(fin_geral.faturamento|default(0)) }}</h3>
-                <i class="fas fa-money-bill-wave position-absolute end-0 bottom-0 m-3 text-secondary opacity-25" style="font-size: 2rem;"></i>
-            </div>
-        </div>
+<section class="kpi-grid">
+    <div class="kpi-card">
+        <span class="section-kicker">Faturamento</span>
+        <strong>R$ {{ "%.2f"|format(fin_geral.faturamento|default(0)) }}</strong>
+        <p>Valor total dos pedidos lidos no periodo.</p>
     </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 bg-primary text-white h-100 position-relative overflow-hidden">
-            <div class="card-body">
-                <h6 class="text-white-50 small fw-bold mb-3">Taxas (Clientes)</h6>
-                <h3 class="mb-0">R$ {{ "%.2f"|format(fin_geral.taxas_clientes|default(0)) }}</h3>
-                <i class="fas fa-hand-holding-usd position-absolute end-0 bottom-0 m-3 text-white opacity-25" style="font-size: 2rem;"></i>
-            </div>
-        </div>
+    <div class="kpi-card">
+        <span class="section-kicker">Taxas dos clientes</span>
+        <strong>R$ {{ "%.2f"|format(fin_geral.taxas_clientes|default(0)) }}</strong>
+        <p>Total de frete recebido no mesmo recorte.</p>
     </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 bg-danger text-white h-100 position-relative overflow-hidden">
-            <div class="card-body">
-                <h6 class="text-white-50 small fw-bold mb-3">Pago Motoboys</h6>
-                <h3 class="mb-0">R$ {{ "%.2f"|format(total_geral|default(0)) }}</h3>
-                <i class="fas fa-motorcycle position-absolute end-0 bottom-0 m-3 text-white opacity-25" style="font-size: 2rem;"></i>
-            </div>
-        </div>
+    <div class="kpi-card">
+        <span class="section-kicker">Pago aos motoboys</span>
+        <strong>R$ {{ "%.2f"|format(total_geral|default(0)) }}</strong>
+        <p>Soma dos pagamentos gerados pelo sistema.</p>
     </div>
-    <div class="col-md-3">
-        {% set faturamento = fin_geral.taxas_clientes | float %}
+    <div class="kpi-card">
+        {% set faturamento_taxas = fin_geral.taxas_clientes | float %}
         {% set pago = total_geral | float %}
-        {% set cobertura = (faturamento / pago * 100) if pago > 0 else 0 %}
-        <div class="card shadow-sm border-0 {% if cobertura < 85 %}bg-warning{% else %}bg-success{% endif %} text-white h-100 position-relative overflow-hidden">
-            <div class="card-body">
-                <h6 class="text-white-50 small fw-bold mb-3">Cobertura de Frete</h6>
-                <h3 class="mb-0">{{ "%.2f"|format(cobertura) }}%</h3>
-                <small class="{% if cobertura < 85 %}text-dark{% else %}text-white-50{% endif %}">Meta: > 85%</small>
-                <i class="fas fa-shield-alt position-absolute end-0 bottom-0 m-3 text-white opacity-25" style="font-size: 2rem;"></i>
-            </div>
-        </div>
+        {% set cobertura = (faturamento_taxas / pago * 100) if pago > 0 else 0 %}
+        <span class="section-kicker">Cobertura do frete</span>
+        <strong>{{ "%.2f"|format(cobertura) }}%</strong>
+        <p>Meta de referencia: manter acima de 85%.</p>
     </div>
-</div>
+</section>
 
-<div class="row">
-    <div class="col-md-7 mb-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-transparent border-0 pt-3">
-                <h6 class="fw-bold text-muted mb-0"><i class="fas fa-building me-2"></i>Gastos por Unidade</h6>
-            </div>
-            <div class="card-body">
-                <div style="height: 320px;">
-                    <canvas id="graficoLoja"></canvas>
+<section class="row g-4 mt-1 mb-1">
+    {% set gap = (total_geral - fin_geral.taxas_clientes) %}
+    {% set maior_loja = por_loja | sort(attribute=1, reverse=True) | first if por_loja else None %}
+    <div class="col-lg-8">
+        <div class="surface-card">
+            <h3 class="surface-title">Como ler este painel</h3>
+            <p class="surface-subtitle">Resumo operacional para conferencia rapida do fechamento.</p>
+            <div class="check-list">
+                <div class="check-item">
+                    <i class="bi bi-receipt-cutoff"></i>
+                    <span><strong>Faturamento</strong> mostra o valor total dos pedidos no recorte filtrado.</span>
+                </div>
+                <div class="check-item">
+                    <i class="bi bi-truck"></i>
+                    <span><strong>Taxas dos clientes</strong> mostra quanto entrou de frete pago pelo cliente.</span>
+                </div>
+                <div class="check-item">
+                    <i class="bi bi-cash-coin"></i>
+                    <span><strong>Pago aos motoboys</strong> mostra quanto saiu no fechamento operacional.</span>
+                </div>
+                <div class="check-item">
+                    <i class="bi bi-shield-check"></i>
+                    <span><strong>Cobertura do frete</strong> indica quanto do pagamento foi coberto pelas taxas cobradas.</span>
                 </div>
             </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="surface-card">
+            <h3 class="surface-title">Leitura automatica</h3>
+            <p class="surface-subtitle">Destaques principais do recorte atual.</p>
+            <div class="mini-kpi-stack">
+                <div class="mini-kpi">
+                    <span>Saldo operacional</span>
+                    <strong>{{ "Deficit" if gap > 0 else "Superavit" }}</strong>
+                    <div class="mt-2 {% if gap > 0 %}text-danger{% else %}text-success{% endif %}">
+                        R$ {{ "%.2f"|format(gap|abs) }}
+                    </div>
+                </div>
+                <div class="mini-kpi">
+                    <span>Loja com maior custo</span>
+                    <strong>{{ maior_loja[0]|upper if maior_loja else "Sem dados" }}</strong>
+                    <div class="mt-2 text-muted">
+                        {% if maior_loja %}R$ {{ "%.2f"|format(maior_loja[1]) }}{% else %}Sem movimentacao{% endif %}
+                    </div>
+                </div>
+                <div class="mini-kpi">
+                    <span>Regra pratica</span>
+                    <strong>{% if cobertura >= 85 %}Cobertura saudavel{% else %}Cobertura abaixo da meta{% endif %}</strong>
+                    <div class="mt-2 text-muted">Meta de referencia: 85%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="row g-4 mt-1">
+    <div class="col-lg-7">
+        <div class="surface-card">
+            <h3 class="surface-title">Gasto por unidade</h3>
+            <p class="surface-subtitle">Comparacao do valor pago aos motoboys em cada loja. Barras maiores indicam maior custo operacional.</p>
+            <canvas id="graficoLoja"></canvas>
         </div>
     </div>
 
-    <div class="col-md-5 mb-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-transparent border-0 pt-3">
-                <h6 class="fw-bold text-muted mb-0"><i class="fas fa-chart-pie me-2"></i>Saúde da Taxa de Entrega</h6>
+    <div class="col-lg-5">
+        <div class="surface-card">
+            <h3 class="surface-title">Saude da taxa de entrega</h3>
+            <p class="surface-subtitle">Relacao entre taxa recebida do cliente e pagamento operacional. Idealmente a parte verde precisa crescer.</p>
+
+            <div class="mb-4">
+                {% if gap > 0 %}
+                    <div class="status-pill negative">
+                        <i class="bi bi-arrow-down-right"></i>
+                        <span>Deficit de R$ {{ "%.2f"|format(gap) }}</span>
+                    </div>
+                {% else %}
+                    <div class="status-pill positive">
+                        <i class="bi bi-arrow-up-right"></i>
+                        <span>Superavit de R$ {{ "%.2f"|format(gap|abs) }}</span>
+                    </div>
+                {% endif %}
             </div>
-            <div class="card-body d-flex flex-column align-items-center justify-content-center">
-                <div style="height: 250px; width: 100%;">
-                    <canvas id="graficoEficiencia"></canvas>
-                </div>
-                <div class="mt-4 text-center">
-                    {% set gap = (total_geral - fin_geral.taxas_clientes) %}
-                    {% if gap > 0 %}
-                        <div class="badge bg-soft-danger text-danger p-2 px-3 rounded-pill border border-danger">
-                            <i class="fas fa-arrow-down me-1"></i> Déficit: R$ {{ "%.2f"|format(gap) }}
-                        </div>
-                    {% else %}
-                        <div class="badge bg-soft-success text-success p-2 px-3 rounded-pill border border-success">
-                            <i class="fas fa-arrow-up me-1"></i> Superávit: R$ {{ "%.2f"|format(gap|abs) }}
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
+
+            <canvas id="graficoEficiencia"></canvas>
         </div>
     </div>
-</div>
+</section>
 
 <script>
     const dadosLoja = {

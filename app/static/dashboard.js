@@ -17,7 +17,7 @@ function renderizarGraficos() {
         data: {
             labels: dadosLoja.labels,
             datasets: [{
-                label: "Total Gasto",
+                label: "Pagamento total por loja",
                 data: dadosLoja.values,
                 backgroundColor: "rgba(13, 110, 253, 0.8)",
                 borderColor: "#0d6efd",
@@ -34,7 +34,7 @@ function renderizarGraficos() {
                 tooltip: {
                     padding: 12,
                     callbacks: {
-                        label: (ctx) => ` R$ ${ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                        label: (ctx) => ` Pago na loja: R$ ${ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                     }
                 }
             },
@@ -58,7 +58,7 @@ function renderizarGraficos() {
     chartEficiencia = new Chart(ctxEficiencia, {
         type: "doughnut",
         data: {
-            labels: ["Coberto por Taxas", "Custo Empresa (Extra)"],
+            labels: ["Frete coberto pelas taxas", "Valor complementado pela empresa"],
             datasets: [{
                 data: [coberto, prejuizo],
                 backgroundColor: ["#198754", "#dc3545"],
@@ -82,7 +82,7 @@ function renderizarGraficos() {
                             const val = context.raw;
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const perc = ((val / total) * 100).toFixed(1);
-                            return ` R$ ${val.toLocaleString('pt-BR', {minimumFractionDigits: 2})} (${perc}%)`;
+                            return ` ${context.label}: R$ ${val.toLocaleString('pt-BR', {minimumFractionDigits: 2})} (${perc}%)`;
                         }
                     }
                 }

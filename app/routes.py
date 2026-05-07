@@ -3,25 +3,14 @@ from flask_login import login_required, current_user, login_user, logout_user
 from sqlalchemy import func, text
 from werkzeug.security import check_password_hash
 import pandas as pd
-import json
-import os
 from io import BytesIO
 from datetime import datetime
+from app.config import CACHE_FILE, load_config
 from app.extensions import db
 from app.models import User, Historico, HistoricoMotoboy, ItemCompra, get_br_time
 
 bp = Blueprint("main", __name__)
 
-# Configurações de Caminho
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
-CACHE_FILE = os.path.join(BASE_DIR, "cache_distancias.json")
-
-def load_config():
-    if not os.path.exists(CONFIG_FILE):
-        return {"lojas": {}, "valor_base": 0, "valor_km": 0, "valor_minimo": 0}
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
 
 # ======================================================
 # AUTENTICAÇÃO
@@ -120,10 +109,34 @@ def calcular_rotas():
     cfg = load_config()
     return render_template("calcular.html", lojas=cfg["lojas"], base=cfg["valor_base"], km=cfg["valor_km"], minimo=cfg["valor_minimo"])
 
+@bp.route("/conferencia-pedidos")
+@login_required
+def conferencia_pedidos():
+    return render_template("conferencia_pedidos.html")
+
+@bp.route("/conferencia-pedidos/analisar", methods=["POST"])
+@login_required
+def conferencia_pedidos_analisar():
+    from app.services.report_compare import compare_reports
+
+    arquivo_cardapio = request.files.get("planilha_cardapio")
+    arquivo_food = request.files.get("planilha_food")
+
+    if not arquivo_cardapio or not arquivo_food:
+        return jsonify({"error": "Envie as duas planilhas para comparar."}), 400
+
+    try:
+        df_cardapio = pd.read_excel(arquivo_cardapio)
+        df_food = pd.read_excel(arquivo_food)
+        resultado = compare_reports(df_cardapio, df_food)
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
 @bp.route("/calcular-preview", methods=["POST"])
 @login_required
 def calcular_preview():
-    from app.services.calculator import calcular_pagamentos
+    from app.services.calculator import calcular_pagamentos, DistanceServiceUnavailable
     from app.services.cache import load_cache, save_cache
     cfg = load_config()
     loja_key = request.form.get("loja")
@@ -134,13 +147,16 @@ def calcular_preview():
 
     df = pd.read_excel(arquivo) if arquivo.filename.endswith('.xlsx') else pd.read_csv(arquivo)
     cache = load_cache(CACHE_FILE)
-    
-    resumo, financeiro = calcular_pagamentos(
-        df, cfg["lojas"][loja_key]["endereco"], 
-        float(request.form.get("base")), float(request.form.get("km")), 
-        float(request.form.get("minimo")), cache
-    )
-    
+
+    try:
+        resumo, financeiro = calcular_pagamentos(
+            df, cfg["lojas"][loja_key]["endereco"], 
+            float(request.form.get("base")), float(request.form.get("km")), 
+            float(request.form.get("minimo")), cache
+        )
+    except DistanceServiceUnavailable as e:
+        return jsonify({"error": str(e)}), 503
+
     save_cache(CACHE_FILE, cache)
     return jsonify({"loja": loja_key, "resumo": resumo, "financeiro": financeiro})
 
@@ -153,38 +169,48 @@ def calcular_confirmar():
     ajustes = data.get("ajustes", {})
 
     try:
-        historico = Historico(
-            loja=data.get("loja"),
-            faturamento_pedidos=float(fin.get("faturamento", 0)),
-            taxas_clientes=float(fin.get("taxas_clientes", 0)),
-            turno=resumo[0].get("turno", "Jantar") if resumo else "Jantar"
-        )
-        
-        db.session.add(historico)
-        db.session.flush() 
+        resumo_por_turno = {}
+        financeiro_por_turno = fin.get("por_turno", {})
 
-        total_pago_geral = 0
-        for r in resumo:
-            aj = ajustes.get(r["entregador"], {"valor": 0, "motivo": ""})
-            v_final = float(r["total"]) + float(aj["valor"])
-            
-            m = HistoricoMotoboy(
-                historico_id=historico.id, 
-                motoboy=r["entregador"], 
-                entregas=int(r["entregas"]),
-                km_total=float(r["media_km"]) * int(r["entregas"]), 
-                valor_original=float(r["total"]),
-                ajuste=float(aj["valor"]), 
-                valor_final=v_final, 
-                motivo_ajuste=aj["motivo"],
-                loja=historico.loja, 
-                turno=r["turno"], 
-                pedidos=str(r.get("pedidos", ""))
+        for item in resumo:
+            resumo_por_turno.setdefault(item.get("turno", "Jantar"), []).append(item)
+
+        for turno, itens_turno in resumo_por_turno.items():
+            fin_turno = financeiro_por_turno.get(turno, {})
+            historico = Historico(
+                loja=data.get("loja"),
+                faturamento_pedidos=float(fin_turno.get("faturamento", 0)),
+                taxas_clientes=float(fin_turno.get("taxas_clientes", 0)),
+                turno=turno
             )
-            db.session.add(m)
-            total_pago_geral += v_final
 
-        historico.total = total_pago_geral
+            db.session.add(historico)
+            db.session.flush()
+
+            total_pago_turno = 0
+            for r in itens_turno:
+                chave_ajuste = r.get("grupo") or r["entregador"]
+                aj = ajustes.get(chave_ajuste, {"valor": 0, "motivo": ""})
+                v_final = float(r["total"]) + float(aj["valor"])
+
+                m = HistoricoMotoboy(
+                    historico_id=historico.id,
+                    motoboy=r["entregador"],
+                    entregas=int(r["entregas"]),
+                    km_total=float(r["media_km"]) * int(r["entregas"]),
+                    valor_original=float(r["total"]),
+                    ajuste=float(aj["valor"]),
+                    valor_final=v_final,
+                    motivo_ajuste=aj["motivo"],
+                    loja=historico.loja,
+                    turno=turno,
+                    pedidos=str(r.get("pedidos", ""))
+                )
+                db.session.add(m)
+                total_pago_turno += v_final
+
+            historico.total = total_pago_turno
+
         db.session.commit()
         return jsonify({"ok": True})
     except Exception as e:

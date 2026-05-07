@@ -1,18 +1,13 @@
-// Variáveis de controle
 let historicoAtual = 0;
 let dadosCompletosCachorro = null;
 const NUMERO_WHATSAPP = "558396300542";
-
-/**
- * --- GESTÃO DE DETALHES E WHATSAPP ---
- */
 
 async function abrirModal(id, visualizar) {
     historicoAtual = id;
     try {
         const r = await fetch(`/historico/detalhes/${id}`);
         const d = await r.json();
-        dadosCompletosCachorro = d; 
+        dadosCompletosCachorro = d;
 
         const tbody = document.getElementById("modalBody");
         if (tbody) {
@@ -25,17 +20,15 @@ async function abrirModal(id, visualizar) {
                     <td><input type="text" class="form-control form-control-sm" value="${i.motivo ?? ""}" ${visualizar ? "disabled" : ""} data-motivo="${i.id}"></td>
                 </tr>
                 <tr id="detalhe-entrega-${i.id}" style="display: none;"><td colspan="5" class="bg-light text-start small p-3">IDs: ${i.pedidos}</td></tr>
-            `).join('');
+            `).join("");
         }
 
-        // Ajusta visibilidade dos botões no modal principal
         const btnSalvar = document.getElementById("btnSalvar");
         const btnWhatsapp = document.getElementById("btnWhatsapp");
-        
+
         if (btnSalvar) btnSalvar.style.display = visualizar ? "none" : "inline-block";
         if (btnWhatsapp) btnWhatsapp.style.display = visualizar ? "inline-block" : "none";
-        
-        // Abre o modal de detalhes (padrão do site)
+
         const modalEl = document.getElementById("modalHistorico");
         if (modalEl) {
             const modalBusca = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -53,39 +46,54 @@ function toggleEntregas(id) {
 
 function enviarWhatsapp() {
     const d = dadosCompletosCachorro;
-    if(!d) return;
+    if (!d) return;
 
-    let msg = `*RELATÓRIO - ${d.loja.toUpperCase()}*\nFaturamento: R$ ${d.faturamento}\nCobertura: ${d.cobertura}%\n\n`;
-    
-    // Inclui os erros no relatório do WhatsApp se existirem
+    const faturamento = Number(d.faturamento || 0);
+    const taxasClientes = Number(d.taxas_clientes || 0);
+    const pagoMotoboys = Number(d.pago_motoboys || 0);
+    const cobertura = Number(d.cobertura || 0);
+    const saldoFrete = taxasClientes - pagoMotoboys;
+
+    let msg = `*RELATORIO DE FECHAMENTO - ${String(d.loja || "").toUpperCase()}*\n`;
+    msg += `Data: ${d.data || "-"}\n`;
+    msg += `Turno: ${d.turno || "-"}\n\n`;
+    msg += `*RESUMO FINANCEIRO*\n`;
+    msg += `Faturamento dos pedidos: R$ ${faturamento.toFixed(2)}\n`;
+    msg += `Taxas pagas pelos clientes: R$ ${taxasClientes.toFixed(2)}\n`;
+    msg += `Total pago aos motoboys: R$ ${pagoMotoboys.toFixed(2)}\n`;
+    msg += `Cobertura do frete: ${cobertura.toFixed(2)}%\n`;
+    msg += `${saldoFrete >= 0 ? "Saldo do frete" : "Complemento da empresa"}: R$ ${Math.abs(saldoFrete).toFixed(2)}\n\n`;
+
     if (d.erros && d.erros !== "None" && d.erros.trim() !== "") {
-        msg += `*OCORRÊNCIAS:* ${d.erros}\n\n`;
+        msg += `*OCORRENCIAS*\n${d.erros}\n\n`;
     }
 
-    document.querySelectorAll("[data-id]").forEach(i => {
-        const row = i.closest("tr");
+    msg += `*PAGAMENTO POR MOTOBOY*\n`;
+    let posicao = 1;
+    document.querySelectorAll("[data-id]").forEach(input => {
+        const row = input.closest("tr");
         const motoboy = row.children[0].innerText;
-        msg += `• *${motoboy}*: R$ ${i.value}\n`;
+        const entregasTexto = row.children[1].innerText.replace("🔍", "").trim();
+        const quantidadePedidos = parseInt(entregasTexto, 10) || 0;
+        msg += `${posicao}. ${motoboy}: ${quantidadePedidos} pedidos | R$ ${Number(input.value || 0).toFixed(2)}\n`;
+        posicao += 1;
     });
+
+    msg += `\n*TOTAL DO FECHAMENTO*: R$ ${pagoMotoboys.toFixed(2)}`;
 
     window.open(`https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");
 }
 
-/**
- * --- GESTÃO DE ERROS E OBSERVAÇÕES ---
- */
-
 function abrirModalErro(id, textoAtual) {
-    // Limpa o texto se for nulo ou "None" vindo do Python
-    const textoLimpo = (textoAtual === 'None' || !textoAtual) ? "" : textoAtual;
-    
-    const inputId = document.getElementById('erro_registro_id');
-    const inputTexto = document.getElementById('erro_texto');
-    
+    const textoLimpo = (textoAtual === "None" || !textoAtual) ? "" : textoAtual;
+
+    const inputId = document.getElementById("erro_registro_id");
+    const inputTexto = document.getElementById("erro_texto");
+
     if (inputId) inputId.value = id;
     if (inputTexto) inputTexto.value = textoLimpo;
-    
-    const modalErroEl = document.getElementById('modalErro');
+
+    const modalErroEl = document.getElementById("modalErro");
     if (modalErroEl) {
         const modalErro = bootstrap.Modal.getOrCreateInstance(modalErroEl);
         modalErro.show();
@@ -93,18 +101,16 @@ function abrirModalErro(id, textoAtual) {
 }
 
 async function salvarErro() {
-    const idInput = document.getElementById('erro_registro_id');
-    const textoInput = document.getElementById('erro_texto');
-    
+    const idInput = document.getElementById("erro_registro_id");
+    const textoInput = document.getElementById("erro_texto");
+
     if (!idInput || !textoInput) return;
 
     const id = idInput.value;
     const texto = textoInput.value;
-    
-    // Seleciona o botão de salvar (seja pela classe ou pelo onclick)
-    const btn = document.querySelector('#modalErro .btn-salvar-filipeia') || 
-                document.querySelector('#modalErro button[onclick="salvarErro()"]');
-    
+    const btn = document.querySelector("#modalErro .btn-salvar-filipeia") ||
+        document.querySelector('#modalErro button[onclick="salvarErro()"]');
+
     const originalText = btn ? btn.innerHTML : "Salvar";
 
     if (btn) {
@@ -114,13 +120,13 @@ async function salvarErro() {
 
     try {
         const r = await fetch(`/historico/salvar-erro/${id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ erro: texto })
         });
 
         if (r.ok) {
-            location.reload(); // Recarrega para mostrar o ícone de que tem erro
+            location.reload();
         } else {
             alert("Erro ao salvar no servidor.");
             if (btn) {
@@ -129,7 +135,7 @@ async function salvarErro() {
             }
         }
     } catch (error) {
-        alert("Erro de conexão.");
+        alert("Erro de conexao.");
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = originalText;
@@ -138,18 +144,17 @@ async function salvarErro() {
 }
 
 function visualizarErro(texto) {
-    // Função para mostrar o erro sem precisar abrir o modal de edição
     if (!texto || texto === "None" || texto.trim() === "") {
-        alert("📊 Filipéia Trattoria:\nNenhuma ocorrência registrada para este turno.");
+        alert("Filipéia Trattoria:\nNenhuma ocorrencia registrada para este turno.");
     } else {
-        alert("⚠️ OCORRÊNCIAS REGISTRADAS:\n\n" + texto);
+        alert("OCORRENCIAS REGISTRADAS:\n\n" + texto);
     }
 }
 
 async function excluirRegistro(id) {
     if (confirm("Deseja realmente excluir permanentemente este registro?")) {
         try {
-            const r = await fetch(`/historico/excluir/${id}`, { method: 'POST' });
+            const r = await fetch(`/historico/excluir/${id}`, { method: "POST" });
             if (r.ok) location.reload();
         } catch (e) {
             alert("Erro ao excluir.");
