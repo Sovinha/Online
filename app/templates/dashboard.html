@@ -31,8 +31,8 @@
     </div>
 
     <form class="filter-bar" method="GET">
-        <input type="date" name="data_inicio" class="form-control" value="{{ request.args.get('data_inicio', '') }}">
-        <input type="date" name="data_fim" class="form-control" value="{{ request.args.get('data_fim', '') }}">
+        <input type="date" name="data_inicio" class="form-control" value="{{ filtro_data_inicio }}">
+        <input type="date" name="data_fim" class="form-control" value="{{ filtro_data_fim }}">
 
         <select name="loja" class="form-select">
             <option value="">Todas as lojas</option>
@@ -43,8 +43,8 @@
 
         <select name="turno" class="form-select">
             <option value="">Todos os turnos</option>
-            <option value="Almoço" {% if request.args.get('turno') == 'Almoço' %}selected{% endif %}>Almoco</option>
-            <option value="Jantar" {% if request.args.get('turno') == 'Jantar' %}selected{% endif %}>Jantar</option>
+            <option value="Almoço" {% if filtro_turno == 'Almoço' %}selected{% endif %}>Almoço</option>
+            <option value="Jantar" {% if filtro_turno == 'Jantar' %}selected{% endif %}>Jantar</option>
         </select>
 
         <button type="submit" class="btn btn-brand">
@@ -52,8 +52,26 @@
             <span>Aplicar filtros</span>
         </button>
         <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">Limpar</a>
-        <a href="{{ url_for('main.dashboard_motoboys') }}" class="btn btn-outline-dark">Ver motoboys</a>
+        <a href="{{ url_for('main.dashboard_motoboys', loja=request.args.get('loja', ''), data_inicio=filtro_data_inicio, data_fim=filtro_data_fim) }}" class="btn btn-outline-dark">Ver motoboys</a>
     </form>
+
+    <div class="filter-shortcuts mt-3">
+        <a class="btn btn-outline-secondary" href="{{ url_for('main.dashboard', data_inicio=mes_atual_inicio, data_fim=mes_atual_fim, loja=request.args.get('loja', ''), turno=filtro_turno) }}">Mês atual</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('main.dashboard', data_inicio=mes_anterior_inicio, data_fim=mes_anterior_fim, loja=request.args.get('loja', ''), turno=filtro_turno) }}">Mês anterior</a>
+    </div>
+</section>
+
+<section class="surface-card mb-4">
+    <div class="surface-inline">
+        <div>
+            <span class="section-kicker">Periodo ativo</span>
+            <h3 class="surface-title">{{ filtro_data_inicio[8:10] }}/{{ filtro_data_inicio[5:7] }}/{{ filtro_data_inicio[0:4] }} ate {{ filtro_data_fim[8:10] }}/{{ filtro_data_fim[5:7] }}/{{ filtro_data_fim[0:4] }}</h3>
+        </div>
+        <div class="status-pill neutral">
+            <i class="bi bi-clock-history"></i>
+            <span>{{ filtro_turno if filtro_turno else 'Todos os turnos' }}</span>
+        </div>
+    </div>
 </section>
 
 <section class="kpi-grid">

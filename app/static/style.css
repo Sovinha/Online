@@ -625,6 +625,24 @@ body {
     min-height: 44px;
 }
 
+.filter-shortcuts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.surface-inline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.status-pill.neutral {
+    background: rgba(112, 81, 91, 0.12);
+    color: var(--ink-strong);
+}
+
 html[data-bs-theme="dark"] body {
     background:
         radial-gradient(circle at top left, rgba(181, 95, 106, 0.12), transparent 24%),
@@ -669,6 +687,11 @@ html[data-bs-theme="dark"] .preview-table thead th {
     color: #f6f5f3;
 }
 
+html[data-bs-theme="dark"] .status-pill.neutral {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f6f5f3;
+}
+
 @media (max-width: 1199px) {
     .hero-panel {
         grid-template-columns: 1fr;
@@ -703,8 +726,13 @@ html[data-bs-theme="dark"] .preview-table thead th {
 
     .section-heading,
     .filter-bar,
-    .app-toolbar {
+    .app-toolbar,
+    .surface-inline {
         align-items: stretch;
+    }
+
+    .surface-inline {
+        flex-direction: column;
     }
 
     .preview-grid,

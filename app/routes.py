@@ -5,6 +5,7 @@ from werkzeug.security import check_password_hash
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
+from calendar import monthrange
 from app.config import CACHE_FILE, load_config
 from app.extensions import db
 from app.models import User, Historico, HistoricoMotoboy, ItemCompra, get_br_time
@@ -45,9 +46,23 @@ def home():
 @bp.route("/dashboard")
 @login_required
 def dashboard():
+    hoje = get_br_time().date()
+    primeiro_dia_mes = hoje.replace(day=1)
+    ultimo_dia_mes = hoje.replace(day=monthrange(hoje.year, hoje.month)[1])
+
+    data_inicio = request.args.get("data_inicio") or primeiro_dia_mes.isoformat()
+    data_fim = request.args.get("data_fim") or ultimo_dia_mes.isoformat()
     loja_sel = request.args.get("loja")
+    turno_sel = request.args.get("turno")
     q = Historico.query
-    if loja_sel: q = q.filter(Historico.loja == loja_sel)
+    if loja_sel:
+        q = q.filter(Historico.loja == loja_sel)
+    if turno_sel:
+        q = q.filter(Historico.turno == turno_sel)
+    if data_inicio:
+        q = q.filter(func.date(Historico.data) >= data_inicio)
+    if data_fim:
+        q = q.filter(func.date(Historico.data) <= data_fim)
 
     stats = q.with_entities(
         func.sum(Historico.total).label("pago"),
@@ -61,7 +76,26 @@ def dashboard():
     }
     total_geral = float(stats.pago or 0)
     
-    por_loja = db.session.query(Historico.loja, func.sum(Historico.total)).group_by(Historico.loja).all()
+    por_loja_query = db.session.query(Historico.loja, func.sum(Historico.total))
+    if loja_sel:
+        por_loja_query = por_loja_query.filter(Historico.loja == loja_sel)
+    if turno_sel:
+        por_loja_query = por_loja_query.filter(Historico.turno == turno_sel)
+    if data_inicio:
+        por_loja_query = por_loja_query.filter(func.date(Historico.data) >= data_inicio)
+    if data_fim:
+        por_loja_query = por_loja_query.filter(func.date(Historico.data) <= data_fim)
+    por_loja = por_loja_query.group_by(Historico.loja).all()
+
+    mes_anterior_ano = hoje.year if hoje.month > 1 else hoje.year - 1
+    mes_anterior_mes = hoje.month - 1 if hoje.month > 1 else 12
+    mes_anterior_inicio = hoje.replace(year=mes_anterior_ano, month=mes_anterior_mes, day=1)
+    mes_anterior_fim = hoje.replace(
+        year=mes_anterior_ano,
+        month=mes_anterior_mes,
+        day=monthrange(mes_anterior_ano, mes_anterior_mes)[1]
+    )
+
     cfg = load_config()
     
     return render_template("dashboard.html", 
@@ -69,15 +103,26 @@ def dashboard():
                            fin_geral=fin_geral, 
                            por_loja=por_loja, 
                            todas_lojas=list(cfg.get("lojas", {}).keys()),
+                           filtro_data_inicio=data_inicio,
+                           filtro_data_fim=data_fim,
+                           filtro_turno=turno_sel or "",
+                           mes_atual_inicio=primeiro_dia_mes.isoformat(),
+                           mes_atual_fim=ultimo_dia_mes.isoformat(),
+                           mes_anterior_inicio=mes_anterior_inicio.isoformat(),
+                           mes_anterior_fim=mes_anterior_fim.isoformat(),
                            request=request)
 
 @bp.route("/dashboard/motoboys")
 @login_required
 def dashboard_motoboys():
+    hoje = get_br_time().date()
+    primeiro_dia_mes = hoje.replace(day=1)
+    ultimo_dia_mes = hoje.replace(day=monthrange(hoje.year, hoje.month)[1])
+
     cfg = load_config()
     loja = request.args.get("loja")
-    data_inicio = request.args.get("data_inicio")
-    data_fim = request.args.get("data_fim")
+    data_inicio = request.args.get("data_inicio") or primeiro_dia_mes.isoformat()
+    data_fim = request.args.get("data_fim") or ultimo_dia_mes.isoformat()
 
     q = db.session.query(
         HistoricoMotoboy.motoboy,
